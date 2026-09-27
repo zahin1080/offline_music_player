@@ -1,4 +1,4 @@
-# minimal_music_player
+# music_player
 
 A new Flutter Music App project.
 
