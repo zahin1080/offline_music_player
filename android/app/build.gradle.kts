@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.example.minimal_music_player"
-    compileSdk = 37
+    compileSdk = 35
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -16,7 +16,7 @@ android {
     defaultConfig {
         applicationId = "com.example.minimal_music_player"
         minSdk = flutter.minSdkVersion
-        targetSdk = 37
+        targetSdk = 35
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }

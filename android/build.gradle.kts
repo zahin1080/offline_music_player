@@ -32,7 +32,7 @@ subprojects {
             }
 
             // 2. Align compileSdk
-            androidExt.compileSdk = 37
+            androidExt.compileSdk = 35
         }
     }
 
