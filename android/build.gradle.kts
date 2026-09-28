@@ -42,7 +42,7 @@ subprojects {
                             it.parameterTypes.size == 1 &&
                             (it.parameterTypes[0] == Int::class.javaPrimitiveType || it.parameterTypes[0] == Integer::class.java)
                 }
-                compileMethod?.invoke(androidExt, 35)
+                compileMethod?.invoke(androidExt, 37)
             } catch (_: Exception) {}
         }
 
