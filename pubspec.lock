@@ -473,7 +473,7 @@ packages:
     source: hosted
     version: "13.0.2"
   permission_handler_android:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: permission_handler_android
       sha256: b1ce660f4d0dcaffdf2605a19544c129fb5adda4e6fd039992ae356c4e437039
