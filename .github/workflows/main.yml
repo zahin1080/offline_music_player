@@ -54,13 +54,6 @@ jobs:
       - name: Clean Flutter
         run: flutter clean
 
-      - name: Clean Gradle
-        run: |
-          cd android
-          chmod +x gradlew
-          ./gradlew clean
-          cd ..
-
       - name: Build Android APK
         run: flutter build apk --release --split-per-abi
 
