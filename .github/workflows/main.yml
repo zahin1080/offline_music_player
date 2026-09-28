@@ -1,3 +1,5 @@
+name: "Build & Release"
+
 on:
   pull_request:
     branches:
@@ -6,7 +8,8 @@ on:
     branches:
       - main
 
-name: "Build & Release"
+permissions:
+  contents: write
 
 jobs:
   build-mobile:
@@ -19,6 +22,11 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '17'
+
+      - name: Install Android Platform 35
+        run: |
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
       - uses: subosito/flutter-action@v2
         with:
@@ -41,7 +49,7 @@ jobs:
         if: github.event_name == 'push'
         uses: ncipollo/release-action@v1
         with:
-          artifacts: "build/app/outputs/flutter-apk/*,build/ios/iphoneos/app.ipa"
+          artifacts: "build/app/outputs/flutter-apk/*.apk,build/ios/iphoneos/app.ipa"
           tag: v1.0.${{ github.run_number }}
           token: ${{ secrets.TOKEN }}
           allowUpdates: true

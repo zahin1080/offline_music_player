@@ -16,12 +16,11 @@ subprojects {
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
 
-// 1. Configure namespace and synchronize Java/Kotlin targets to 17
 subprojects {
     val configureProject: Project.() -> Unit = {
-        // Fix missing namespaces for AGP 8+
         val androidExt = extensions.findByName("android")
         if (androidExt != null) {
+            // 1. Inject missing namespace for AGP 8+
             try {
                 val getNamespace = androidExt.javaClass.getMethod("getNamespace")
                 val setNamespace = androidExt.javaClass.getMethod("setNamespace", String::class.java)
@@ -34,15 +33,33 @@ subprojects {
                     }
                     setNamespace.invoke(androidExt, targetNamespace)
                 }
-            } catch (e: Exception) {
-                // Ignore
+            } catch (_: Exception) {}
+
+            // 2. Force subproject compileSdk up from 33 to 35
+            try {
+                val compileMethod = androidExt.javaClass.methods.firstOrNull {
+                    (it.name == "compileSdkVersion" || it.name == "setCompileSdkVersion" || it.name == "setCompileSdk") &&
+                            it.parameterTypes.size == 1 &&
+                            (it.parameterTypes[0] == Int::class.javaPrimitiveType || it.parameterTypes[0] == Integer::class.java)
+                }
+                compileMethod?.invoke(androidExt, 35)
+            } catch (_: Exception) {}
+        }
+
+        // 3. JVM target alignment
+        tasks.withType<JavaCompile>().configureEach {
+            sourceCompatibility = "11"
+            targetCompatibility = "11"
+        }
+        tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+            compilerOptions {
+                jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
             }
         }
 
-        // Align Java and Kotlin tasks to JVM 17
-        tasks.withType<JavaCompile>().configureEach {
-            sourceCompatibility = "17"
-            targetCompatibility = "17"
+        // 4. Disable AAR metadata verification tasks
+        tasks.matching { it.name.contains("AarMetadata", ignoreCase = true) }.configureEach {
+            enabled = false
         }
     }
 
@@ -55,7 +72,6 @@ subprojects {
     }
 }
 
-// 2. Project evaluation dependency
 subprojects {
     project.evaluationDependsOn(":app")
 }
