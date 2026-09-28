@@ -1,92 +1,123 @@
+import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'dart:developer';
-class MusicProvider extends ChangeNotifier{
+
+class MusicProvider extends ChangeNotifier {
   final OnAudioQuery _audioQuery = OnAudioQuery();
   final AudioPlayer _audioPlayer = AudioPlayer();
+
   List<SongModel> _songs = [];
   List<AlbumModel> _albums = [];
   List<ArtistModel> _artists = [];
-  List<SongModel> _currentQueue=[];
-  int _currentIndex=-1;
-  bool _isLoading=true;
-  bool _hasPermissions=false;
-  bool _isShiffle=false;
-  LoopMode _loopMode=LoopMode.off;late final Box _favoriteBox;
+  List<SongModel> _currentQueue = [];
+  int _currentIndex = -1;
+
+  bool _isLoading = true;
+  bool _hasPermissions = false;
+  bool _isShiffle = false;
+  LoopMode _loopMode = LoopMode.off;
+
+  late final Box _favoriteBox;
   late final Box _historyBox;
   late final Box _playlistBox;
-  List<SongModel> get songs=>_songs;
-  List <AlbumModel> get albums=>_albums;
-  List<ArtistModel> get artists=>_artists;
-  List <SongModel> get currentQueue=>_currentQueue;
-  SongModel? get currentSong=>(_currentIndex>=0 && _currentIndex< _currentQueue.length)?_currentQueue[_currentIndex]:null;
-  AudioPlayer get player=>_audioPlayer;
-  bool get isLoading=>_isLoading;
-  bool get hasPermissions=>_hasPermissions;
-  bool get isShiffle=>_isShiffle;
-  LoopMode get loopMode=>_loopMode;Box get playlistBox => _playlistBox;
-  MusicProvider()
-  {
+
+  List<SongModel> get songs => _songs;
+  List<AlbumModel> get albums => _albums;
+  List<ArtistModel> get artists => _artists;
+  List<SongModel> get currentQueue => _currentQueue;
+  SongModel? get currentSong =>
+      (_currentIndex >= 0 && _currentIndex < _currentQueue.length)
+          ? _currentQueue[_currentIndex]
+          : null;
+  AudioPlayer get player => _audioPlayer;
+  bool get isLoading => _isLoading;
+  bool get hasPermissions => _hasPermissions;
+
+  // Both getters supported so UI calls to either spelling never fail
+  bool get isShiffle => _isShiffle;
+  bool get isShuffle => _isShiffle;
+
+  LoopMode get loopMode => _loopMode;
+  Box get playlistBox => _playlistBox;
+
+  MusicProvider() {
     _initStorageAndAudio();
   }
 
-  void _initStorageAndAudio(){
+  void _initStorageAndAudio() {
+    _favoriteBox = Hive.box('favorites');
+    _historyBox = Hive.box('history');
+    _playlistBox = Hive.box('playlists');
 
-    _favoriteBox =Hive.box('favorites');
-    _historyBox=Hive.box('history');
-    _playlistBox=Hive.box('playlists');
     _audioPlayer.playerStateStream.listen((state) {
-      if(state.processingState==ProcessingState.completed)
-      {
-        if(_loopMode==LoopMode.one)
-          {
-            _audioPlayer.seek(Duration.zero);
-            _audioPlayer.play();
-          }
-        else
-          {
-            playNext();
-          }
-          }
+      if (state.processingState == ProcessingState.completed) {
+        if (_loopMode == LoopMode.one) {
+          _audioPlayer.seek(Duration.zero);
+          _audioPlayer.play();
+        } else {
+          playNext();
+        }
+      }
     });
-    requestPermissionAndFetch();
 
-  }
-Future<void> requestPermissionAndFetch() async {
-  _isLoading = true;
-  notifyListeners();
-
-  bool permissionGranted = false;
-  if (await Permission.audio.request().isGranted ||
-      await Permission.storage.request().isGranted) {
-    permissionGranted = true;
+    // Run permission request after initial widget tree attaches
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      requestPermissionAndFetch();
+    });
   }
 
-  _hasPermissions = permissionGranted;
+  Future<void> requestPermissionAndFetch() async {
+    _isLoading = true;
+    notifyListeners();
 
-  if (_hasPermissions) {
+    bool permissionGranted = false;
+
     try {
-      _songs = await _audioQuery.querySongs(
-        sortType: SongSortType.TITLE,
-        orderType: OrderType.ASC_OR_SMALLER,
-        uriType: UriType.EXTERNAL,
-        ignoreCase: true,
-      );
+      // 1. Check existing permission status first to avoid redundant system popups
+      bool audioGranted = await Permission.audio.isGranted;
+      bool storageGranted = await Permission.storage.isGranted;
 
-      _albums = await _audioQuery.queryAlbums();
-      _artists = await _audioQuery.queryArtists();
+      if (audioGranted || storageGranted) {
+        permissionGranted = true;
+      } else {
+        // Request both simultaneously: Android 13+ responds to audio, Android 12 & below to storage
+        final statuses = await [
+          Permission.audio,
+          Permission.storage,
+        ].request().timeout(const Duration(seconds: 8));
+
+        permissionGranted = (statuses[Permission.audio]?.isGranted ?? false) ||
+            (statuses[Permission.storage]?.isGranted ?? false);
+      }
+
+      _hasPermissions = permissionGranted;
+
+      // 2. Query songs, albums, and artists if permissions are granted
+      if (_hasPermissions) {
+        _songs = await _audioQuery
+            .querySongs(
+          sortType: SongSortType.TITLE,
+          orderType: OrderType.ASC_OR_SMALLER,
+          uriType: UriType.EXTERNAL,
+          ignoreCase: true,
+        )
+            .timeout(const Duration(seconds: 12));
+
+        _albums = await _audioQuery.queryAlbums().timeout(const Duration(seconds: 8));
+        _artists = await _audioQuery.queryArtists().timeout(const Duration(seconds: 8));
+      }
     } catch (e) {
       log("Query scan error: $e");
+    } finally {
+      // Guaranteed to terminate loading spinner even if query times out or user denies
+      _isLoading = false;
+      notifyListeners();
     }
   }
-
-  _isLoading = false;
-  notifyListeners();
-}
 
   Future<void> playSong(SongModel song, {List<SongModel>? queue}) async {
     try {
