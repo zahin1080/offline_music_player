@@ -23,13 +23,13 @@ jobs:
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
-          java-version: '17'
+          distribution: "zulu"
+          java-version: "17"
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.44.2'
+          flutter-version: "3.44.2"
           cache: true
 
       - name: Flutter version
@@ -48,11 +48,11 @@ jobs:
             "platforms;android-35" \
             "build-tools;35.0.0"
 
-      - name: Get dependencies
-        run: flutter pub get
-
       - name: Clean Flutter
         run: flutter clean
+
+      - name: Get dependencies
+        run: flutter pub get
 
       - name: Build Android APK
         run: flutter build apk --release --split-per-abi
@@ -82,7 +82,7 @@ jobs:
           path: build/ios/iphoneos/app.ipa
 
       - name: Push to Releases
-        if: github.event_name == 'push'
+        if: github.event_name == "push"
         uses: ncipollo/release-action@v1
         with:
           artifacts: |
