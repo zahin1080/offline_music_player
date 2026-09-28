@@ -82,7 +82,7 @@ jobs:
           path: build/ios/iphoneos/app.ipa
 
       - name: Push to Releases
-        if: github.event_name == "push"
+        if: github.event_name == 'push'
         uses: ncipollo/release-action@v1
         with:
           artifacts: |
