@@ -5,38 +5,41 @@ class MyDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Drawer(
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: theme.colorScheme.surface,
       child: Column(
         children: [
-          DrawerHeader(child: Center(child: Icon(Icons.music_note,size:50,color: Theme.of(context).colorScheme.inversePrimary,
-          ),
-          ),
-
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left:20.0 ,top:20.0),
-            child: ListTile(
-              title: const Text("H O M E"),
-              leading: const Icon(Icons.home),
-              onTap:()=> Navigator.pop(context),
-
+          DrawerHeader(
+            child: Center(
+              child: Icon(
+                Icons.music_note,
+                size: 50,
+                color: theme.colorScheme.inversePrimary,
+              ),
             ),
           ),
-
           Padding(
-            padding: const EdgeInsets.only(left:20.0 ,top:0),
+            padding: const EdgeInsets.only(left: 20.0, top: 20.0),
             child: ListTile(
-              title: const Text("S E T T I N G S"),
+              title: const Text("H O M E", style: TextStyle(letterSpacing: 2)),
+              leading: const Icon(Icons.home),
+              onTap: () => Navigator.pop(context),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 20.0),
+            child: ListTile(
+              title: const Text("S E T T I N G S", style: TextStyle(letterSpacing: 2)),
               leading: const Icon(Icons.settings),
-              onTap:() {Navigator.pop(context);
+              onTap: () {
+                Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context)=> SettingsPage(),)
-
+                  MaterialPageRoute(builder: (context) => const SettingsPage()),
                 );
-  },
-
+              },
             ),
           ),
         ],
