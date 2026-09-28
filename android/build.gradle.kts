@@ -16,9 +16,10 @@ subprojects {
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
 
-// 1. Configure the namespace BEFORE evaluationDependsOn(":app")
+// 1. Configure namespace and synchronize Java/Kotlin targets to 17
 subprojects {
-    val configureNamespace: Project.() -> Unit = {
+    val configureProject: Project.() -> Unit = {
+        // Fix missing namespaces for AGP 8+
         val androidExt = extensions.findByName("android")
         if (androidExt != null) {
             try {
@@ -34,22 +35,27 @@ subprojects {
                     setNamespace.invoke(androidExt, targetNamespace)
                 }
             } catch (e: Exception) {
-                // Ignore if extension does not support namespace
+                // Ignore
             }
+        }
+
+        // Align Java and Kotlin tasks to JVM 17
+        tasks.withType<JavaCompile>().configureEach {
+            sourceCompatibility = "17"
+            targetCompatibility = "17"
         }
     }
 
-    // If already evaluated, execute directly; otherwise use afterEvaluate
     if (state.executed) {
-        configureNamespace()
+        configureProject()
     } else {
         afterEvaluate {
-            configureNamespace()
+            configureProject()
         }
     }
 }
 
-// 2. Evaluate dependencies AFTER namespace configuration has been registered
+// 2. Project evaluation dependency
 subprojects {
     project.evaluationDependsOn(":app")
 }
