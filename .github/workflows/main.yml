@@ -15,41 +15,86 @@ jobs:
   build-mobile:
     name: Build Android & iOS
     runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v4
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
 
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.2'
+          cache: true
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Java version
+        run: java -version
+
+      - name: Flutter doctor
+        run: flutter doctor -v
+
       - name: Install Android Platform 35
         run: |
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-35" "build-tools;35.0.0"
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
+            "platforms;android-35" \
+            "build-tools;35.0.0"
 
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Clean Flutter
+        run: flutter clean
+
+      - name: Clean Gradle
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew clean
+          cd ..
 
       - name: Build Android APK
         run: flutter build apk --release --split-per-abi
 
-      - name: Build iOS IPA (unsigned)
+      - name: Build iOS
+        run: flutter build ios --no-codesign
+
+      - name: Create unsigned IPA
         run: |
-          flutter build ios --no-codesign
           cd build/ios/iphoneos
-          mkdir Payload
+          mkdir -p Payload
           cd Payload
           ln -s ../Runner.app
           cd ..
           zip -r app.ipa Payload
 
+      - name: Upload Android APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apks
+          path: build/app/outputs/flutter-apk/*.apk
+
+      - name: Upload iOS IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-ipa
+          path: build/ios/iphoneos/app.ipa
+
       - name: Push to Releases
         if: github.event_name == 'push'
         uses: ncipollo/release-action@v1
         with:
-          artifacts: "build/app/outputs/flutter-apk/*.apk,build/ios/iphoneos/app.ipa"
+          artifacts: |
+            build/app/outputs/flutter-apk/*.apk
+            build/ios/iphoneos/app.ipa
           tag: v1.0.${{ github.run_number }}
           token: ${{ secrets.TOKEN }}
           allowUpdates: true
