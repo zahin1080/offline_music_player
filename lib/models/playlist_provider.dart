@@ -89,12 +89,16 @@ WidgetsBinding.instance.addPostFrameCallback((_) {
 requestPermissionAndFetch();
 });
 }
-  Future<void> requestPermissionAndFetch() async {
+Future<void> requestPermissionAndFetch() async {
     _isLoading = true;
     _playbackError = null;
     notifyListeners();
 
     try {
+      if (await Permission.notification.isDenied) {
+        await Permission.notification.request();
+      }
+
       bool permissionGranted = false;
       PermissionStatus audioStatus = await Permission.audio.status;
       PermissionStatus storageStatus = await Permission.storage.status;
@@ -109,6 +113,7 @@ requestPermissionAndFetch();
 
         final aRes = statuses[Permission.audio];
         final sRes = statuses[Permission.storage];
+
         permissionGranted = (aRes?.isGranted ?? false) || (sRes?.isGranted ?? false);
       }
 
@@ -116,9 +121,10 @@ requestPermissionAndFetch();
 
       if (_hasPermissions) {
         await rescanLibrary();
+        _restoreLastSession();
       }
     } catch (e) {
-      log("Storage permission/indexing error: $e");
+      log("Storage/Notification permission error: $e");
     } finally {
       _isLoading = false;
       notifyListeners();

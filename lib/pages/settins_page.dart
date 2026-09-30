@@ -17,13 +17,15 @@ class SettingsPage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: theme.colorScheme.surface,
         elevation: 0,
-        title: Text(
-          "S E T T I N G S",
-          style: TextStyle(
-            color: theme.colorScheme.inversePrimary,
-            letterSpacing: 2,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+        title: Center(
+          child: Text(
+            "S E T T I N G S",
+            style: TextStyle(
+              color: Colors.greenAccent,
+              letterSpacing: 2,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ),
