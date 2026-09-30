@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:minimal_music_player/models/song.dart';
 import 'package:minimal_music_player/models/albumview.dart';
 import 'package:minimal_music_player/models/albumlist.dart';
-
+import 'package:minimal_music_player/pages/downloadlistview.dart';
 class LibraryTabHost extends StatelessWidget {
   const LibraryTabHost({super.key});
 
@@ -48,7 +48,7 @@ class LibraryTabHost extends StatelessWidget {
       );
     }
 
-    if (!provider.hasPermissions) {
+    if (!provider.hasPermission) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -95,6 +95,7 @@ class LibraryTabHost extends StatelessWidget {
             child: TabBarView(
               children: [
                 SongsListView(),
+                DownloadsListView(),
                 AlbumsGridView(),
                 ArtistsListView(),
               ],

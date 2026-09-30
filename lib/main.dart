@@ -17,6 +17,8 @@ Future<void> main() async{
   await Hive.openBox('favorites');
   await Hive.openBox('history');
   await Hive.openBox('playlists');
+  await Hive.openBox('stats');
+  await Hive.openBox('session');
   runApp(
     MultiProvider(
       providers: [

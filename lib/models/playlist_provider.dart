@@ -1,15 +1,16 @@
 import 'dart:developer';
 import 'package:flutter/material.dart';
+import 'dart:io';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:permission_handler/permission_handler.dart';
-
+enum SongSortOption { title, artist, dateAdded, duration }
 class MusicProvider extends ChangeNotifier {
   final OnAudioQuery _audioQuery = OnAudioQuery();
   final AudioPlayer _audioPlayer = AudioPlayer();
-
+  Map<String, List<SongModel>> _folders = {};
   List<SongModel> _songs = [];
   List<AlbumModel> _albums = [];
   List<ArtistModel> _artists = [];
@@ -19,108 +20,216 @@ class MusicProvider extends ChangeNotifier {
   bool _isLoading = true;
   bool _hasPermissions = false;
   bool _isShiffle = false;
+  double _playbackSpeed = 1.0;
+  String? _playbackError;
   LoopMode _loopMode = LoopMode.off;
-
+  SongSortOption _currentSort = SongSortOption.title;
+  bool _isPermanentlyDenied = false;
   late final Box _favoriteBox;
   late final Box _historyBox;
   late final Box _playlistBox;
+  late final Box _statsBox;
+  late final Box _sessionBox;
 
   List<SongModel> get songs => _songs;
   List<AlbumModel> get albums => _albums;
   List<ArtistModel> get artists => _artists;
+  Map<String, List<SongModel>> get folders => _folders;
   List<SongModel> get currentQueue => _currentQueue;
-  SongModel? get currentSong =>
-      (_currentIndex >= 0 && _currentIndex < _currentQueue.length)
-          ? _currentQueue[_currentIndex]
-          : null;
+  SongModel? get currentSong => (_currentIndex >= 0 && _currentIndex < _currentQueue.length)
+      ? _currentQueue[_currentIndex]
+      : null;
+
   AudioPlayer get player => _audioPlayer;
   bool get isLoading => _isLoading;
-  bool get hasPermissions => _hasPermissions;
-
-  // Both getters supported so UI calls to either spelling never fail
-  bool get isShiffle => _isShiffle;
+  bool get hasPermission => _hasPermissions;
+  bool get isPermanentlyDenied => _isPermanentlyDenied;
   bool get isShuffle => _isShiffle;
-
   LoopMode get loopMode => _loopMode;
+  double get playbackSpeed => _playbackSpeed;
+  String? get playbackError => _playbackError;
   Box get playlistBox => _playlistBox;
-
+  SongSortOption get currentSort => _currentSort;
+  List<SongModel> get downloadedSongs {
+    return _songs.where((song) {
+      final path = song.data.toLowerCase();
+      return path.contains('/download/') || path.contains('/downloads/');
+    }).toList();
+  }
   MusicProvider() {
     _initStorageAndAudio();
   }
 
-  void _initStorageAndAudio() {
-    _favoriteBox = Hive.box('favorites');
-    _historyBox = Hive.box('history');
-    _playlistBox = Hive.box('playlists');
+Future<void> _initStorageAndAudio() async {
+_favoriteBox = Hive.box('favorites');
+_historyBox = Hive.box('history');
+_playlistBox = Hive.box('playlists');
+_statsBox = Hive.box('stats');
+_sessionBox = Hive.box('session');
 
-    _audioPlayer.playerStateStream.listen((state) {
-      if (state.processingState == ProcessingState.completed) {
-        if (_loopMode == LoopMode.one) {
-          _audioPlayer.seek(Duration.zero);
-          _audioPlayer.play();
-        } else {
-          playNext();
-        }
-      }
-    });
+_audioPlayer.playerStateStream.listen((state) {
+if (state.processingState == ProcessingState.completed) {
+if (_loopMode == LoopMode.one) {
+_audioPlayer.seek(Duration.zero);
+_audioPlayer.play();
+} else {
+playNext();
+}
+}
+});
 
-    // Run permission request after initial widget tree attaches
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      requestPermissionAndFetch();
-    });
-  }
 
+_audioPlayer.positionStream.listen((position) {
+if (currentSong != null) {
+_sessionBox.put('lastPosition', position.inMilliseconds);
+}
+});
+
+WidgetsBinding.instance.addPostFrameCallback((_) {
+requestPermissionAndFetch();
+});
+}
   Future<void> requestPermissionAndFetch() async {
     _isLoading = true;
+    _playbackError = null;
     notifyListeners();
 
-    bool permissionGranted = false;
-
     try {
-      // 1. Check existing permission status first to avoid redundant system popups
-      bool audioGranted = await Permission.audio.isGranted;
-      bool storageGranted = await Permission.storage.isGranted;
+      bool permissionGranted = false;
+      PermissionStatus audioStatus = await Permission.audio.status;
+      PermissionStatus storageStatus = await Permission.storage.status;
 
-      if (audioGranted || storageGranted) {
+      if (audioStatus.isGranted || storageStatus.isGranted) {
         permissionGranted = true;
       } else {
-        // Request both simultaneously: Android 13+ responds to audio, Android 12 & below to storage
         final statuses = await [
           Permission.audio,
           Permission.storage,
-        ].request().timeout(const Duration(seconds: 8));
+        ].request().timeout(const Duration(seconds: 10));
 
-        permissionGranted = (statuses[Permission.audio]?.isGranted ?? false) ||
-            (statuses[Permission.storage]?.isGranted ?? false);
+        final aRes = statuses[Permission.audio];
+        final sRes = statuses[Permission.storage];
+        permissionGranted = (aRes?.isGranted ?? false) || (sRes?.isGranted ?? false);
       }
 
       _hasPermissions = permissionGranted;
 
-      // 2. Query songs, albums, and artists if permissions are granted
       if (_hasPermissions) {
-        _songs = await _audioQuery
-            .querySongs(
-          sortType: SongSortType.TITLE,
-          orderType: OrderType.ASC_OR_SMALLER,
-          uriType: UriType.EXTERNAL,
-          ignoreCase: true,
-        )
-            .timeout(const Duration(seconds: 12));
-
-        _albums = await _audioQuery.queryAlbums().timeout(const Duration(seconds: 8));
-        _artists = await _audioQuery.queryArtists().timeout(const Duration(seconds: 8));
+        await rescanLibrary();
       }
     } catch (e) {
-      log("Query scan error: $e");
+      log("Storage permission/indexing error: $e");
     } finally {
-      // Guaranteed to terminate loading spinner even if query times out or user denies
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  Future<void> playSong(SongModel song, {List<SongModel>? queue}) async {
+  Future<void> rescanLibrary() async {
     try {
+      final rawSongs = await _audioQuery.querySongs(
+        sortType: SongSortType.TITLE,
+        orderType: OrderType.ASC_OR_SMALLER,
+        uriType: UriType.EXTERNAL,
+        ignoreCase: true,
+      );
+
+      _songs = rawSongs.where((song) {
+        if (song.data.isEmpty) return false;
+        try {
+          return File(song.data).existsSync();
+        } catch (_) {
+          return true;
+        }
+      }).toList();
+
+      _albums = await _audioQuery.queryAlbums();
+      _artists = await _audioQuery.queryArtists();
+
+      _buildFolderIndex();
+      _applySort();
+    } catch (e) {
+      log("Scan error: $e");
+    }
+    notifyListeners();
+  }
+
+  void _buildFolderIndex() {
+    _folders.clear();
+    for (var song in _songs) {
+      if (song.data.isNotEmpty) {
+        final file = File(song.data);
+        final folderPath = file.parent.path;
+        final folderName = folderPath.split(Platform.pathSeparator).last;
+        _folders.putIfAbsent(folderName, () => []).add(song);
+      }
+    }
+  }
+
+  void sortSongs(SongSortOption sortOption) {
+    _currentSort = sortOption;
+    _applySort();
+    notifyListeners();
+  }
+
+  void _applySort() {
+    switch (_currentSort) {
+      case SongSortOption.title:
+        _songs.sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+        break;
+      case SongSortOption.artist:
+        _songs.sort((a, b) => (a.artist ?? '').toLowerCase().compareTo((b.artist ?? '').toLowerCase()));
+        break;
+      case SongSortOption.dateAdded:
+        _songs.sort((a, b) => (b.dateAdded ?? 0).compareTo(a.dateAdded ?? 0));
+        break;
+      case SongSortOption.duration:
+        _songs.sort((a, b) => (b.duration ?? 0).compareTo(a.duration ?? 0));
+        break;
+    }
+  }
+
+  void _restoreLastSession() {
+    final lastSongId = _sessionBox.get('lastSongId');
+    final lastPositionMs = _sessionBox.get('lastPosition', defaultValue: 0);
+
+    if (lastSongId != null && _songs.isNotEmpty) {
+      final matchIndex = _songs.indexWhere((s) => s.id == lastSongId);
+      if (matchIndex != -1) {
+        _currentQueue = List.from(_songs);
+        _currentIndex = matchIndex;
+        final song = _songs[matchIndex];
+
+        final audioSource = AudioSource.uri(
+          Uri.parse(song.uri!),
+          tag: MediaItem(
+            id: song.id.toString(),
+            album: song.album ?? "Unknown Album",
+            title: song.title,
+            artist: song.artist ?? "Unknown Artist",
+            artUri: Uri.parse("content://media/external/audio/albumart/${song.albumId}"),
+          ),
+        );
+        _audioPlayer.setAudioSource(
+          audioSource,
+          initialPosition: Duration(milliseconds: lastPositionMs),
+        );
+      }
+    }
+  }
+
+  Future<void> playSong(SongModel song, {List<SongModel>? queue, Duration? startPosition}) async {
+    _playbackError = null;
+    try {
+      if (song.data.isNotEmpty) {
+        final file = File(song.data);
+        if (!file.existsSync()) {
+          _playbackError = "Audio file missing or deleted from storage";
+          notifyListeners();
+          return;
+        }
+      }
+
       _currentQueue = queue != null ? List.from(queue) : List.from(_songs);
       _currentIndex = _currentQueue.indexWhere((item) => item.id == song.id);
 
@@ -135,13 +244,21 @@ class MusicProvider extends ChangeNotifier {
         ),
       );
 
-      await _audioPlayer.setAudioSource(audioSource);
+      await _audioPlayer.setAudioSource(audioSource, initialPosition: startPosition);
+      await _audioPlayer.setSpeed(_playbackSpeed);
       _audioPlayer.play();
 
       _historyBox.put(song.id, DateTime.now().toIso8601String());
+      int currentCount = _statsBox.get(song.id, defaultValue: 0);
+      _statsBox.put(song.id, currentCount + 1);
+
+      _sessionBox.put('lastSongId', song.id);
+
       notifyListeners();
     } catch (e) {
-      log("Error during playback initialization: $e");
+      _playbackError = "Unsupported or corrupted audio track";
+      log("Playback exception: $e");
+      notifyListeners();
     }
   }
 
@@ -173,6 +290,16 @@ class MusicProvider extends ChangeNotifier {
     }
   }
 
+  void seek(Duration pos) => _audioPlayer.seek(pos);
+  void forward10() => _audioPlayer.seek(_audioPlayer.position + const Duration(seconds: 10));
+  void rewind10() => _audioPlayer.seek(_audioPlayer.position - const Duration(seconds: 10));
+
+  void setPlaybackSpeed(double speed) {
+    _playbackSpeed = speed;
+    _audioPlayer.setSpeed(speed);
+    notifyListeners();
+  }
+
   void toggleShuffle() {
     _isShiffle = !_isShiffle;
     if (_isShiffle && _currentQueue.isNotEmpty) {
@@ -195,6 +322,28 @@ class MusicProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void addToQueue(SongModel song) {
+    _currentQueue.add(song);
+    notifyListeners();
+  }
+
+  void playNextInQueue(SongModel song) {
+    if (_currentIndex >= 0 && _currentIndex < _currentQueue.length) {
+      _currentQueue.insert(_currentIndex + 1, song);
+    } else {
+      _currentQueue.add(song);
+    }
+    notifyListeners();
+  }
+
+  void removeFromQueue(int index) {
+    if (index < _currentQueue.length) {
+      _currentQueue.removeAt(index);
+      if (index < _currentIndex) _currentIndex--;
+      notifyListeners();
+    }
+  }
+
   void reorderQueue(int oldIndex, int newIndex) {
     if (oldIndex < newIndex) newIndex -= 1;
     final item = _currentQueue.removeAt(oldIndex);
@@ -202,6 +351,13 @@ class MusicProvider extends ChangeNotifier {
     if (currentSong != null) {
       _currentIndex = _currentQueue.indexOf(currentSong!);
     }
+    notifyListeners();
+  }
+
+  void clearQueue() {
+    _currentQueue.clear();
+    _currentIndex = -1;
+    _audioPlayer.stop();
     notifyListeners();
   }
 
@@ -216,15 +372,52 @@ class MusicProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  List<SongModel> getFavorites() =>
-      _songs.where((song) => isFavorite(song.id)).toList();
+  List<SongModel> getFavorites() => _songs.where((song) => isFavorite(song.id)).toList();
 
-  // Playlists
+  List<SongModel> getRecentlyPlayed() {
+    final keys = _historyBox.keys.cast<int>().toList();
+    return keys.reversed
+        .map((id) => _songs.firstWhere((s) => s.id == id, orElse: () => SongModel({})))
+        .where((s) => s.id != 0)
+        .take(20)
+        .toList();
+  }
+
+  List<SongModel> getRecentlyAdded() {
+    final sorted = List<SongModel>.from(_songs);
+    sorted.sort((a, b) => (b.dateAdded ?? 0).compareTo(a.dateAdded ?? 0));
+    return sorted.take(20).toList();
+  }
+
+  List<SongModel> getMostPlayed() {
+    final sorted = List<SongModel>.from(_songs);
+    sorted.sort((a, b) {
+      int countA = _statsBox.get(a.id, defaultValue: 0);
+      int countB = _statsBox.get(b.id, defaultValue: 0);
+      return countB.compareTo(countA);
+    });
+    return sorted.where((s) => (_statsBox.get(s.id, defaultValue: 0) as int) > 0).take(20).toList();
+  }
+
   void createPlaylist(String name) {
     if (!_playlistBox.containsKey(name)) {
       _playlistBox.put(name, <int>[]);
       notifyListeners();
     }
+  }
+
+  void renamePlaylist(String oldName, String newName) {
+    if (_playlistBox.containsKey(oldName)) {
+      final songs = _playlistBox.get(oldName);
+      _playlistBox.delete(oldName);
+      _playlistBox.put(newName, songs);
+      notifyListeners();
+    }
+  }
+
+  void deletePlaylist(String name) {
+    _playlistBox.delete(name);
+    notifyListeners();
   }
 
   void addSongToPlaylist(String name, int songId) {
@@ -237,9 +430,27 @@ class MusicProvider extends ChangeNotifier {
     }
   }
 
+  void removeSongFromPlaylist(String name, int songId) {
+    List<dynamic> list = _playlistBox.get(name, defaultValue: <int>[]);
+    List<int> updated = List<int>.from(list);
+    updated.remove(songId);
+    _playlistBox.put(name, updated);
+    notifyListeners();
+  }
+
   List<SongModel> getPlaylistSongs(String name) {
     List<dynamic> ids = _playlistBox.get(name, defaultValue: <int>[]);
     return _songs.where((s) => ids.contains(s.id)).toList();
+  }
+
+  void clearHistory() {
+    _historyBox.clear();
+    notifyListeners();
+  }
+
+  void clearPlayStatistics() {
+    _statsBox.clear();
+    notifyListeners();
   }
 
   @override
