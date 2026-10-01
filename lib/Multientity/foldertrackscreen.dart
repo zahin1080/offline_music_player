@@ -29,7 +29,7 @@ class FolderTracksScreen extends StatelessWidget {
           return ListTile(
             leading: QueryArtworkWidget(id: song.id, type: ArtworkType.AUDIO),
             title: Text(song.title, maxLines: 1),
-            subtitle: Text(song.artist ?? "Unknown"),
+            subtitle: Text(song.artist ?? "Unknown",style: TextStyle(color: Colors.green),),
             onTap: () => provider.playSong(song, queue: songs),
           );
         },

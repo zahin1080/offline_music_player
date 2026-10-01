@@ -94,12 +94,11 @@ class DownloadsListView extends StatelessWidget {
           trailing: IconButton(
             icon: Icon(
               provider.isFavorite(song.id) ? Icons.favorite : Icons.favorite_border,
-              color: provider.isFavorite(song.id) ? Colors.redAccent : Colors.grey,
+              color: provider.isFavorite(song.id) ? Colors.redAccent : Colors.green,
             ),
             onPressed: () => provider.toggleFavorite(song.id),
           ),
           onTap: () {
-            // Plays selected download and loads the rest into the playback queue
             provider.playSong(song, queue: downloads);
           },
         );

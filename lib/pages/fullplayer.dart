@@ -34,7 +34,7 @@ class FullPlayerSheet extends StatelessWidget {
           const SizedBox(height: 12),
           Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey, borderRadius: BorderRadius.circular(2))),
 
-          // Playback Error Banner
+
           if (provider.playbackError != null)
             Container(
               margin: const EdgeInsets.all(12),
@@ -72,7 +72,6 @@ class FullPlayerSheet extends StatelessWidget {
                     ),
                   ),
 
-                  // Metadata & Favorite Toggle
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -94,7 +93,6 @@ class FullPlayerSheet extends StatelessWidget {
                     ],
                   ),
 
-                  // Audio Scrubber
                   StreamBuilder<Duration>(
                     stream: provider.player.positionStream,
                     builder: (context, snapshot) {
@@ -120,7 +118,7 @@ class FullPlayerSheet extends StatelessWidget {
                     },
                   ),
 
-                  // Control Strip
+
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -138,13 +136,12 @@ class FullPlayerSheet extends StatelessWidget {
                       IconButton(icon: const Icon(Icons.forward_10), onPressed: () => provider.forward10()),
                       IconButton(
                         icon: Icon(provider.loopMode == LoopMode.one ? Icons.repeat_one : Icons.repeat,
-                            color: provider.loopMode != LoopMode.off ? theme.colorScheme.inversePrimary : Colors.grey),
+                            color: provider.loopMode != LoopMode.off ? theme.colorScheme.inversePrimary : Colors.blueAccent),
                         onPressed: () => provider.toggleLoop(),
                       ),
                     ],
                   ),
 
-                  // Speed Control & Queue Sheet Trigger
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -157,7 +154,7 @@ class FullPlayerSheet extends StatelessWidget {
                       ),
                       TextButton.icon(
                         icon: const Icon(Icons.queue_music),
-                        label: const Text("Queue"),
+                        label: const Text("Queue",style: TextStyle(color: Colors.deepOrange),),
                         onPressed: () => _openQueueModal(context),
                       ),
                     ],

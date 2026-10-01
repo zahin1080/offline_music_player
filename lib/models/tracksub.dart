@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:on_audio_query/on_audio_query.dart';
-import 'package:minimal_music_player/models/playlist_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:on_audio_query/on_audio_query.dart';
 
-class SongsListView extends StatelessWidget {
-  const SongsListView({super.key});
+import 'package:minimal_music_player/models/playlist_provider.dart';
+class TracksSubView extends StatelessWidget {
+  const TracksSubView({super.key});
 
   void _showRenameDialog(BuildContext context, SongModel song) {
     final provider = context.read<MusicProvider>();
@@ -17,24 +17,21 @@ class SongsListView extends StatelessWidget {
         content: TextField(
           controller: controller,
           autofocus: true,
-          decoration: const InputDecoration(
-            labelText: "Song Title",
-            border: OutlineInputBorder(),
-          ),
+          decoration: const InputDecoration(labelText: "Song Title"),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
+            child: const Text("Cancel",style: TextStyle(color: Colors.amberAccent),),
+
+
           ),
           ElevatedButton(
             onPressed: () {
-              if (controller.text.trim().isNotEmpty) {
-                provider.renameSong(song, controller.text.trim());
-              }
+              provider.renameSong(song, controller.text);
               Navigator.pop(context);
             },
-            child: const Text("Save"),
+            child: const Text("Save",style: TextStyle(color: Colors.indigo),),
           ),
         ],
       ),
@@ -44,20 +41,14 @@ class SongsListView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<MusicProvider>();
-    final theme = Theme.of(context);
     final songs = provider.songs;
 
     if (songs.isEmpty) {
-      return Center(
-        child: Text(
-          "No tracks found on device",
-          style: TextStyle(color: theme.colorScheme.inversePrimary),
-        ),
-      );
+      return const Center(child: Text("No tracks found on storage",style: TextStyle(color: Colors.deepOrangeAccent),));
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.only(bottom: 96),
+      padding: const EdgeInsets.only(bottom: 90),
       itemCount: songs.length,
       itemBuilder: (context, index) {
         final song = songs[index];
@@ -67,17 +58,15 @@ class SongsListView extends StatelessWidget {
           leading: QueryArtworkWidget(
             id: song.id,
             type: ArtworkType.AUDIO,
-            artworkWidth: 48,
-            artworkHeight: 48,
             artworkBorder: BorderRadius.circular(8),
             nullArtworkWidget: Container(
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: theme.colorScheme.secondary,
+                color: Theme.of(context).colorScheme.secondary,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(Icons.music_note, color: theme.colorScheme.inversePrimary),
+              child: const Icon(Icons.music_note),
             ),
           ),
           title: Text(
@@ -85,22 +74,22 @@ class SongsListView extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: isSelected ? const Color(0xFF38BDF8) : null,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              color: isSelected ? Theme.of(context).colorScheme.primary : null,
             ),
           ),
-          subtitle: Text(
-            song.artist ?? "Unknown Artist",
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
+          subtitle: Text(song.artist ?? "Unknown Artist", maxLines: 1),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
                 icon: Icon(
-                  provider.isFavorite(song.id) ? Icons.favorite : Icons.favorite_border,
-                  color: provider.isFavorite(song.id) ? Colors.redAccent : Colors.grey,
+                  provider.isFavorite(song.id)
+                      ? Icons.favorite
+                      : Icons.favorite_border,
+                  color: provider.isFavorite(song.id)
+                      ? Colors.redAccent
+                      : Colors.grey,
                 ),
                 onPressed: () => provider.toggleFavorite(song.id),
               ),
@@ -112,10 +101,7 @@ class SongsListView extends StatelessWidget {
                   } else {
                     provider.addSongToPlaylist(val, song.id);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Added to "$val"'),
-                        duration: const Duration(seconds: 1),
-                      ),
+                      SnackBar(content: Text('Added to "$val"')),
                     );
                   }
                 },
@@ -134,24 +120,18 @@ class SongsListView extends StatelessWidget {
                       ),
                     ),
                     const PopupMenuDivider(),
-                    if (playlistNames.isEmpty)
-                      const PopupMenuItem(
-                        enabled: false,
-                        child: Text("No playlists created yet"),
-                      )
-                    else
-                      ...playlistNames.map(
-                            (name) => PopupMenuItem<String>(
-                          value: name,
-                          child: Text('Add to "$name"'),
-                        ),
+                    ...playlistNames.map(
+                          (name) => PopupMenuItem(
+                        value: name,
+                        child: Text('Add to "$name"'),
                       ),
+                    ),
                   ];
                 },
               ),
             ],
           ),
-          onTap: () => provider.playSong(song, queue: songs),
+          onTap: () => provider.playSong(song),
         );
       },
     );

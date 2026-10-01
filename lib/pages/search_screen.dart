@@ -10,69 +10,254 @@ class SearchScreen extends StatefulWidget {
 }
 
 class _SearchScreenState extends State<SearchScreen> {
+  final TextEditingController _searchController = TextEditingController();
   String _query = "";
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<MusicProvider>();
     final theme = Theme.of(context);
+    final cleanQuery = _query.trim().toLowerCase();
 
-    final matchingSongs = provider.songs
-        .where((s) => s.title.toLowerCase().contains(_query.toLowerCase()) ||
-        (s.artist?.toLowerCase().contains(_query.toLowerCase()) ?? false))
+    final matchingSongs = cleanQuery.isEmpty
+        ? <SongModel>[]
+        : provider.songs
+        .where((s) =>
+    provider.getSongTitle(s).toLowerCase().contains(cleanQuery) ||
+        (s.artist?.toLowerCase().contains(cleanQuery) ?? false))
         .toList();
 
-    final matchingAlbums = provider.albums
-        .where((a) => a.album.toLowerCase().contains(_query.toLowerCase()))
+    final matchingAlbums = cleanQuery.isEmpty
+        ? <AlbumModel>[]
+        : provider.albums
+        .where((a) => a.album.toLowerCase().contains(cleanQuery))
         .toList();
 
-    return Column(
-      children: [
-        AppBar(
-          backgroundColor: theme.colorScheme.surface,
-          title: TextField(
-            decoration: InputDecoration(
-              hintText: "Search songs, albums, artists...",
-              hintStyle: TextStyle(color: theme.colorScheme.inversePrimary.withAlpha(128)),
-              border: InputBorder.none,
-            ),
-            onChanged: (val) => setState(() => _query = val),
-          ),
+    final matchingArtists = cleanQuery.isEmpty
+        ? <ArtistModel>[]
+        : provider.artists
+        .where((ar) => ar.artist.toLowerCase().contains(cleanQuery))
+        .toList();
+
+    final playlistNames = provider.playlistBox.keys.cast<String>().toList();
+    final matchingPlaylists = cleanQuery.isEmpty
+        ? <String>[]
+        : playlistNames
+        .where((name) => name.toLowerCase().contains(cleanQuery))
+        .toList();
+
+    final bool hasResults = matchingSongs.isNotEmpty ||
+        matchingAlbums.isNotEmpty ||
+        matchingArtists.isNotEmpty ||
+        matchingPlaylists.isNotEmpty;
+
+    return Scaffold(
+      backgroundColor: theme.colorScheme.surface,
+      appBar: AppBar(
+        backgroundColor: theme.colorScheme.surface,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: theme.colorScheme.inversePrimary),
+          onPressed: () => Navigator.pop(context),
         ),
-        if (_query.isEmpty)
-          const Expanded(child: Center(child: Text("Type above to search local storage")))
-        else
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.only(bottom: 90),
-              children: [
-                if (matchingSongs.isNotEmpty) ...[
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                    child: Text("SONGS", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                  ),
-                  ...matchingSongs.map((song) => ListTile(
-                    leading: QueryArtworkWidget(id: song.id, type: ArtworkType.AUDIO),
-                    title: Text(song.title, maxLines: 1),
-                    subtitle: Text(song.artist ?? "Unknown"),
-                    onTap: () => provider.playSong(song),
-                  )),
-                ],
-                if (matchingAlbums.isNotEmpty) ...[
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                    child: Text("ALBUMS", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                  ),
-                  ...matchingAlbums.map((album) => ListTile(
-                    leading: QueryArtworkWidget(id: album.id, type: ArtworkType.ALBUM),
-                    title: Text(album.album, maxLines: 1),
-                    subtitle: Text("${album.numOfSongs} songs"),
-                  )),
-                ]
-              ],
+        title: TextField(
+          controller: _searchController,
+          autofocus: true,
+          style: TextStyle(color: theme.colorScheme.inversePrimary),
+          decoration: InputDecoration(
+            hintText: "Search songs, albums, artists...",
+            hintStyle: TextStyle(
+              color: theme.colorScheme.inversePrimary.withValues(alpha: 0.5),
             ),
+            border: InputBorder.none,
           ),
-      ],
+          onChanged: (val) => setState(() => _query = val),
+        ),
+        actions: [
+          if (_query.isNotEmpty)
+            IconButton(
+              icon: Icon(Icons.clear, color: theme.colorScheme.inversePrimary),
+              onPressed: () {
+                _searchController.clear();
+                setState(() => _query = "");
+              },
+            ),
+        ],
+      ),
+      body: cleanQuery.isEmpty
+          ? Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.search,
+              size: 64,
+              color: theme.colorScheme.inversePrimary.withValues(alpha: 0.3),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              "Search songs, artists, albums, and playlists",
+              style: TextStyle(
+                color: theme.colorScheme.inversePrimary.withValues(alpha: 0.6),
+              ),
+            ),
+          ],
+        ),
+      )
+          : !hasResults
+          ? Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.music_off,
+              size: 64,
+              color: theme.colorScheme.inversePrimary.withValues(alpha: 0.3),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'No results found for "$_query"',
+              style: TextStyle(
+                color: theme.colorScheme.inversePrimary.withValues(alpha: 0.7),
+              ),
+            ),
+          ],
+        ),
+      )
+          : ListView(
+        padding: const EdgeInsets.only(bottom: 100),
+        children: [
+          // Songs Section
+          if (matchingSongs.isNotEmpty) ...[
+            _buildHeader("TRACKS (${matchingSongs.length})", theme),
+            ...matchingSongs.map((song) {
+              final isSelected = provider.currentSong?.id == song.id;
+              return ListTile(
+                leading: QueryArtworkWidget(
+                  id: song.id,
+                  type: ArtworkType.AUDIO,
+                  artworkBorder: BorderRadius.circular(8),
+                  nullArtworkWidget: Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.secondary,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.music_note, color: theme.colorScheme.inversePrimary),
+                  ),
+                ),
+                title: Text(
+                  provider.getSongTitle(song),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    color: isSelected ? const Color(0xFF38BDF8) : null,
+                  ),
+                ),
+                subtitle: Text(song.artist ?? "Unknown Artist", maxLines: 1),
+                trailing: IconButton(
+                  icon: Icon(
+                    provider.isFavorite(song.id) ? Icons.favorite : Icons.favorite_border,
+                    color: provider.isFavorite(song.id) ? Colors.redAccent : Colors.grey,
+                  ),
+                  onPressed: () => provider.toggleFavorite(song.id),
+                ),
+                onTap: () => provider.playSong(song, queue: matchingSongs),
+              );
+            }),
+          ],
+
+          // Albums Section
+          if (matchingAlbums.isNotEmpty) ...[
+            _buildHeader("ALBUMS (${matchingAlbums.length})", theme),
+            ...matchingAlbums.map((album) => ListTile(
+              leading: QueryArtworkWidget(
+                id: album.id,
+                type: ArtworkType.ALBUM,
+                artworkBorder: BorderRadius.circular(8),
+                nullArtworkWidget: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.secondary,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.album, color: theme.colorScheme.inversePrimary),
+                ),
+              ),
+              title: Text(album.album, maxLines: 1, overflow: TextOverflow.ellipsis),
+              subtitle: Text("${album.numOfSongs} tracks"),
+              onTap: () {
+                final albumSongs = provider.songs
+                    .where((s) => s.albumId == album.id)
+                    .toList();
+                if (albumSongs.isNotEmpty) {
+                  provider.playSong(albumSongs.first, queue: albumSongs);
+                }
+              },
+            )),
+          ],
+
+          if (matchingArtists.isNotEmpty) ...[
+            _buildHeader("ARTISTS (${matchingArtists.length})", theme),
+            ...matchingArtists.map((artist) => ListTile(
+              leading: CircleAvatar(
+                backgroundColor: theme.colorScheme.secondary,
+                child: Icon(Icons.person, color: theme.colorScheme.inversePrimary),
+              ),
+              title: Text(artist.artist, maxLines: 1),
+              subtitle: Text("${artist.numberOfTracks ?? 0} tracks"),
+              onTap: () {
+                final artistSongs = provider.songs
+                    .where((s) => s.artistId == artist.id)
+                    .toList();
+                if (artistSongs.isNotEmpty) {
+                  provider.playSong(artistSongs.first, queue: artistSongs);
+                }
+              },
+            )),
+          ],
+          if (matchingPlaylists.isNotEmpty) ...[
+            _buildHeader("PLAYLISTS (${matchingPlaylists.length})", theme),
+            ...matchingPlaylists.map((name) {
+              final pSongs = provider.getPlaylistSongs(name);
+              return ListTile(
+                leading: Icon(Icons.queue_music, color: theme.colorScheme.inversePrimary),
+                title: Text(name, maxLines: 1),
+                subtitle: Text("${pSongs.length} tracks"),
+                onTap: () {
+                  if (pSongs.isNotEmpty) {
+                    provider.playSong(pSongs.first, queue: pSongs);
+                  }
+                },
+              );
+            }),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(String title, ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 1.2,
+          color: theme.colorScheme.inversePrimary.withValues(alpha: 0.7),
+        ),
+      ),
     );
   }
 }

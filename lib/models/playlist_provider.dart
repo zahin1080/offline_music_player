@@ -6,7 +6,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:permission_handler/permission_handler.dart';
-enum SongSortOption { title, artist, dateAdded, duration }
+enum SongSortOption {title, artist, dateAdded, duration, playCount }
 class MusicProvider extends ChangeNotifier {
   final OnAudioQuery _audioQuery = OnAudioQuery();
   final AudioPlayer _audioPlayer = AudioPlayer();
@@ -30,6 +30,7 @@ class MusicProvider extends ChangeNotifier {
   late final Box _playlistBox;
   late final Box _statsBox;
   late final Box _sessionBox;
+  late final Box _titlesBox;
 
   List<SongModel> get songs => _songs;
   List<AlbumModel> get albums => _albums;
@@ -50,46 +51,51 @@ class MusicProvider extends ChangeNotifier {
   String? get playbackError => _playbackError;
   Box get playlistBox => _playlistBox;
   SongSortOption get currentSort => _currentSort;
+
   List<SongModel> get downloadedSongs {
     return _songs.where((song) {
       final path = song.data.toLowerCase();
       return path.contains('/download/') || path.contains('/downloads/');
     }).toList();
   }
+
   MusicProvider() {
     _initStorageAndAudio();
   }
 
-Future<void> _initStorageAndAudio() async {
-_favoriteBox = Hive.box('favorites');
-_historyBox = Hive.box('history');
-_playlistBox = Hive.box('playlists');
-_statsBox = Hive.box('stats');
-_sessionBox = Hive.box('session');
+  Future<void> _initStorageAndAudio() async {
+    _favoriteBox = Hive.box('favorites');
+    _historyBox = Hive.box('history');
+    _playlistBox = Hive.box('playlists');
+    _statsBox = Hive.box('stats');
+    _sessionBox = Hive.box('session');
+    _titlesBox = Hive.isBoxOpen('custom_titles')
+        ? Hive.box('custom_titles')
+        : await Hive.openBox('custom_titles');
 
-_audioPlayer.playerStateStream.listen((state) {
-if (state.processingState == ProcessingState.completed) {
-if (_loopMode == LoopMode.one) {
-_audioPlayer.seek(Duration.zero);
-_audioPlayer.play();
-} else {
-playNext();
-}
-}
-});
+    _audioPlayer.playerStateStream.listen((state) {
+      if (state.processingState == ProcessingState.completed) {
+        if (_loopMode == LoopMode.one) {
+          _audioPlayer.seek(Duration.zero);
+          _audioPlayer.play();
+        } else {
+          playNext();
+        }
+      }
+    });
 
+    _audioPlayer.positionStream.listen((position) {
+      if (currentSong != null) {
+        _sessionBox.put('lastPosition', position.inMilliseconds);
+      }
+    });
 
-_audioPlayer.positionStream.listen((position) {
-if (currentSong != null) {
-_sessionBox.put('lastPosition', position.inMilliseconds);
-}
-});
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      requestPermissionAndFetch();
+    });
+  }
 
-WidgetsBinding.instance.addPostFrameCallback((_) {
-requestPermissionAndFetch();
-});
-}
-Future<void> requestPermissionAndFetch() async {
+  Future<void> requestPermissionAndFetch() async {
     _isLoading = true;
     _playbackError = null;
     notifyListeners();
@@ -115,6 +121,8 @@ Future<void> requestPermissionAndFetch() async {
         final sRes = statuses[Permission.storage];
 
         permissionGranted = (aRes?.isGranted ?? false) || (sRes?.isGranted ?? false);
+        _isPermanentlyDenied = (aRes?.isPermanentlyDenied ?? false) ||
+            (sRes?.isPermanentlyDenied ?? false);
       }
 
       _hasPermissions = permissionGranted;
@@ -164,12 +172,42 @@ Future<void> requestPermissionAndFetch() async {
     _folders.clear();
     for (var song in _songs) {
       if (song.data.isNotEmpty) {
-        final file = File(song.data);
-        final folderPath = file.parent.path;
-        final folderName = folderPath.split(Platform.pathSeparator).last;
-        _folders.putIfAbsent(folderName, () => []).add(song);
+        try {
+          final file = File(song.data);
+          final folderPath = file.parent.path;
+          final folderName = folderPath.split(Platform.pathSeparator).last;
+          if (folderName.isNotEmpty) {
+            _folders.putIfAbsent(folderName, () => []).add(song);
+          }
+        } catch (_) {
+          _folders.putIfAbsent("Internal Audio", () => []).add(song);
+        }
       }
     }
+  }
+
+  String getSongTitle(SongModel song) {
+    return _titlesBox.get(song.id, defaultValue: song.title) as String;
+  }
+
+  Future<void> renameSong(SongModel song, String newTitle) async {
+    if (newTitle.trim().isEmpty) return;
+    await _titlesBox.put(song.id, newTitle.trim());
+
+    try {
+      final file = File(song.data);
+      if (file.existsSync()) {
+        final dir = file.parent.path;
+        final extension = song.data.split('.').last;
+        final newPath = "$dir/${newTitle.trim()}.$extension";
+        if (!File(newPath).existsSync()) {
+          await file.rename(newPath);
+        }
+      }
+    } catch (_) {}
+
+    _applySort();
+    notifyListeners();
   }
 
   void sortSongs(SongSortOption sortOption) {
@@ -181,7 +219,7 @@ Future<void> requestPermissionAndFetch() async {
   void _applySort() {
     switch (_currentSort) {
       case SongSortOption.title:
-        _songs.sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+        _songs.sort((a, b) => getSongTitle(a).toLowerCase().compareTo(getSongTitle(b).toLowerCase()));
         break;
       case SongSortOption.artist:
         _songs.sort((a, b) => (a.artist ?? '').toLowerCase().compareTo((b.artist ?? '').toLowerCase()));
@@ -191,6 +229,13 @@ Future<void> requestPermissionAndFetch() async {
         break;
       case SongSortOption.duration:
         _songs.sort((a, b) => (b.duration ?? 0).compareTo(a.duration ?? 0));
+        break;
+      case SongSortOption.playCount:
+        _songs.sort((a, b) {
+          int countA = _statsBox.get(a.id, defaultValue: 0) as int;
+          int countB = _statsBox.get(b.id, defaultValue: 0) as int;
+          return countB.compareTo(countA);
+        });
         break;
     }
   }
@@ -211,7 +256,7 @@ Future<void> requestPermissionAndFetch() async {
           tag: MediaItem(
             id: song.id.toString(),
             album: song.album ?? "Unknown Album",
-            title: song.title,
+            title: getSongTitle(song),
             artist: song.artist ?? "Unknown Artist",
             artUri: Uri.parse("content://media/external/audio/albumart/${song.albumId}"),
           ),
@@ -244,7 +289,7 @@ Future<void> requestPermissionAndFetch() async {
         tag: MediaItem(
           id: song.id.toString(),
           album: song.album ?? "Unknown Album",
-          title: song.title,
+          title: getSongTitle(song),
           artist: song.artist ?? "Unknown Artist",
           artUri: Uri.parse("content://media/external/audio/albumart/${song.albumId}"),
         ),
@@ -254,8 +299,8 @@ Future<void> requestPermissionAndFetch() async {
       await _audioPlayer.setSpeed(_playbackSpeed);
       _audioPlayer.play();
 
-      _historyBox.put(song.id, DateTime.now().toIso8601String());
-      int currentCount = _statsBox.get(song.id, defaultValue: 0);
+      _historyBox.put(song.id, DateTime.now().millisecondsSinceEpoch);
+      int currentCount = _statsBox.get(song.id, defaultValue: 0) as int;
       _statsBox.put(song.id, currentCount + 1);
 
       _sessionBox.put('lastSongId', song.id);
@@ -380,13 +425,24 @@ Future<void> requestPermissionAndFetch() async {
 
   List<SongModel> getFavorites() => _songs.where((song) => isFavorite(song.id)).toList();
 
-  List<SongModel> getRecentlyPlayed() {
-    final keys = _historyBox.keys.cast<int>().toList();
-    return keys.reversed
-        .map((id) => _songs.firstWhere((s) => s.id == id, orElse: () => SongModel({})))
-        .where((s) => s.id != 0)
-        .take(20)
-        .toList();
+  List<SongModel> getRecentlyPlayed({int limit = 20}) {
+    final keys = _historyBox.keys.toList();
+    keys.sort((a, b) {
+      final valA = _historyBox.get(a);
+      final valB = _historyBox.get(b);
+      final timeA = valA is int ? valA : DateTime.tryParse(valA.toString())?.millisecondsSinceEpoch ?? 0;
+      final timeB = valB is int ? valB : DateTime.tryParse(valB.toString())?.millisecondsSinceEpoch ?? 0;
+      return timeB.compareTo(timeA);
+    });
+
+    final List<SongModel> recents = [];
+    for (final key in keys) {
+      try {
+        final song = _songs.firstWhere((s) => s.id == key);
+        recents.add(song);
+      } catch (_) {}
+    }
+    return recents.take(limit).toList();
   }
 
   List<SongModel> getRecentlyAdded() {
@@ -395,15 +451,29 @@ Future<void> requestPermissionAndFetch() async {
     return sorted.take(20).toList();
   }
 
-  List<SongModel> getMostPlayed() {
-    final sorted = List<SongModel>.from(_songs);
-    sorted.sort((a, b) {
-      int countA = _statsBox.get(a.id, defaultValue: 0);
-      int countB = _statsBox.get(b.id, defaultValue: 0);
+  List<SongModel> getMostPlayed({int limit = 20}) {
+    final keys = _statsBox.keys.toList();
+    keys.sort((a, b) {
+      final countA = (_statsBox.get(a) as int?) ?? 0;
+      final countB = (_statsBox.get(b) as int?) ?? 0;
       return countB.compareTo(countA);
     });
-    return sorted.where((s) => (_statsBox.get(s.id, defaultValue: 0) as int) > 0).take(20).toList();
+
+    final List<SongModel> mostPlayed = [];
+    for (final key in keys) {
+      try {
+        final song = _songs.firstWhere((s) => s.id == key);
+        if (((_statsBox.get(key) as int?) ?? 0) > 0) {
+          mostPlayed.add(song);
+        }
+      } catch (_) {}
+    }
+    return mostPlayed.take(limit).toList();
   }
+
+  int getSongPlayCount(int songId) => (_statsBox.get(songId, defaultValue: 0) as int?) ?? 0;
+
+  void clearMostPlayed() => clearPlayStatistics();
 
   void createPlaylist(String name) {
     if (!_playlistBox.containsKey(name)) {

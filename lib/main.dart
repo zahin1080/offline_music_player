@@ -10,6 +10,7 @@ Future<void> main() async{
   await JustAudioBackground.init(
     androidNotificationChannelId: 'com.example.offline_music.channel.audio',
     androidNotificationChannelName: 'Music Playback',
+    androidNotificationIcon: 'mipmap/launcher_icon',
     androidNotificationOngoing: true,
     androidStopForegroundOnPause: true,
   );

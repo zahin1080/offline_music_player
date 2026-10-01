@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:minimal_music_player/models/playlist_provider.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:provider/provider.dart';
-import 'package:minimal_music_player/pages/playlistdetails.dart';
 
-class PlaylistsScreen extends StatelessWidget {
-  const PlaylistsScreen({super.key});
+import 'package:minimal_music_player/models/playlist_provider.dart';
+
+import 'package:minimal_music_player/pages/playlistdetails.dart';
+class PlaylistsSubView extends StatelessWidget {
+  const PlaylistsSubView({super.key});
 
   void _showCreateDialog(BuildContext context) {
     final controller = TextEditingController();
@@ -24,7 +25,7 @@ class PlaylistsScreen extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text("Cancel",style: TextStyle(color: Colors.blueAccent),),
+            child: const Text("Cancel"),
           ),
           ElevatedButton(
             onPressed: () {
@@ -34,7 +35,7 @@ class PlaylistsScreen extends StatelessWidget {
                 Navigator.pop(ctx);
               }
             },
-            child: const Text("Create",style: TextStyle(color: Colors.blueAccent),),
+            child: const Text("Create"),
           ),
         ],
       ),
@@ -53,7 +54,7 @@ class PlaylistsScreen extends StatelessWidget {
           children: [
             ListTile(
               leading: const Icon(Icons.edit),
-              title: const Text("Rename Playlist",style: TextStyle(color: Colors.blueAccent),),
+              title: const Text("Rename Playlist"),
               onTap: () {
                 Navigator.pop(ctx);
                 _showRenameDialog(context, playlistName);
@@ -78,7 +79,7 @@ class PlaylistsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("Rename Playlist",style: TextStyle(color: Colors.blueAccent),),
+        title: const Text("Rename Playlist"),
         content: TextField(
           controller: controller,
           autofocus: true,
@@ -87,7 +88,7 @@ class PlaylistsScreen extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text("Cancel",style: TextStyle(color: Colors.blueAccent),),
+            child: const Text("Cancel"),
           ),
           ElevatedButton(
             onPressed: () {
@@ -97,7 +98,7 @@ class PlaylistsScreen extends StatelessWidget {
                 Navigator.pop(ctx);
               }
             },
-            child: const Text("Save",style: TextStyle(color: Colors.deepOrangeAccent),),
+            child: const Text("Save"),
           ),
         ],
       ),
@@ -112,25 +113,26 @@ class PlaylistsScreen extends StatelessWidget {
 
     return Column(
       children: [
-        AppBar(
-          backgroundColor: theme.colorScheme.surface,
-          elevation: 0,
-          title: Text(
-            "P L A Y L I S T S",
-            style: TextStyle(
-              color: Colors.greenAccent,
-              letterSpacing: 2,
-              fontWeight: FontWeight.bold,
-            ),
+        // Action header to add new playlists
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "Your Playlists (${playlistNames.length})",
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text("New"),
+                onPressed: () => _showCreateDialog(context),
+              ),
+            ],
           ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.add),
-              tooltip: "New Playlist",
-              onPressed: () => _showCreateDialog(context),
-            ),
-          ],
         ),
+
+        // Playlists list
         Expanded(
           child: playlistNames.isEmpty
               ? Center(
@@ -140,26 +142,26 @@ class PlaylistsScreen extends StatelessWidget {
                 Icon(
                   Icons.queue_music,
                   size: 64,
-                  color: theme.colorScheme.inversePrimary.withValues(alpha: 0.3),
+                  color: theme.colorScheme.inversePrimary.withAlpha(80),
                 ),
                 const SizedBox(height: 12),
                 Text(
                   "No playlists created yet",
                   style: TextStyle(
-                    color:Colors.blueAccent,
+                    color: theme.colorScheme.inversePrimary.withAlpha(150),
                   ),
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton.icon(
                   icon: const Icon(Icons.add),
-                  label: const Text("Create First Playlist",style: TextStyle(color: Colors.blueAccent),),
+                  label: const Text("Create First Playlist"),
                   onPressed: () => _showCreateDialog(context),
                 ),
               ],
             ),
           )
               : ListView.builder(
-            padding: const EdgeInsets.only(bottom: 96, top: 8),
+            padding: const EdgeInsets.only(bottom: 96, top: 4),
             itemCount: playlistNames.length,
             itemBuilder: (context, index) {
               final name = playlistNames[index];
@@ -197,9 +199,19 @@ class PlaylistsScreen extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 subtitle: Text("${songs.length} tracks"),
-                trailing: IconButton(
-                  icon: const Icon(Icons.more_vert),
-                  onPressed: () => _showPlaylistOptions(context, name),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (songs.isNotEmpty)
+                      IconButton(
+                        icon: const Icon(Icons.play_circle_outline),
+                        onPressed: () => provider.playSong(songs.first, queue: songs),
+                      ),
+                    IconButton(
+                      icon: const Icon(Icons.more_vert),
+                      onPressed: () => _showPlaylistOptions(context, name),
+                    ),
+                  ],
                 ),
                 onTap: () {
                   Navigator.push(
