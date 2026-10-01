@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:minimal_music_player/pages/home_page.dart';
-import 'package:minimal_music_player/theme/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:minimal_music_player/models/playlist_provider.dart';
 import 'package:just_audio_background/just_audio_background.dart';
+import 'package:minimal_music_player/core/theme/theme_provider.dart';
+import 'package:minimal_music_player/providers/playlist_provider.dart';
+import 'package:minimal_music_player/ui/screens/home_page.dart';
+
 Future<void> main() async {
   await JustAudioBackground.init(
     androidNotificationChannelId: 'com.ryanheise.bg_demo.channel.audio',
@@ -12,6 +13,7 @@ Future<void> main() async {
     androidNotificationOngoing: true,
     androidStopForegroundOnPause: true,
     androidNotificationIcon: 'mipmap/launcher_icon',
+
   );
   await Hive.initFlutter();
   await Hive.openBox('favorites');
@@ -27,9 +29,8 @@ Future<void> main() async {
       ],
       child: const MyApp(),
     ),
-  );;
+  );
 }
-
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -45,5 +46,4 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
 
