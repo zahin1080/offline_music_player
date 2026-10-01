@@ -268,7 +268,6 @@ class MusicProvider extends ChangeNotifier {
       }
     }
   }
-
   Future<void> playSong(SongModel song, {List<SongModel>? queue, Duration? startPosition}) async {
     _playbackError = null;
     try {
@@ -283,15 +282,16 @@ class MusicProvider extends ChangeNotifier {
 
       _currentQueue = queue != null ? List.from(queue) : List.from(_songs);
       _currentIndex = _currentQueue.indexWhere((item) => item.id == song.id);
-
       final audioSource = AudioSource.uri(
         Uri.parse(song.uri!),
         tag: MediaItem(
           id: song.id.toString(),
-          album: song.album ?? "Unknown Album",
-          title: getSongTitle(song),
-          artist: song.artist ?? "Unknown Artist",
-          artUri: Uri.parse("content://media/external/audio/albumart/${song.albumId}"),
+          album: (song.album != null && song.album!.trim().isNotEmpty) ? song.album! : "Unknown Album",
+          title: getSongTitle(song).trim().isNotEmpty ? getSongTitle(song) : "Unknown Title",
+          artist: (song.artist != null && song.artist!.trim().isNotEmpty) ? song.artist! : "Unknown Artist",
+          artUri: song.albumId != null
+              ? Uri.parse("content://media/external/audio/albumart/${song.albumId}")
+              : null,
         ),
       );
 

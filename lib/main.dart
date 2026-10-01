@@ -5,14 +5,13 @@ import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:minimal_music_player/models/playlist_provider.dart';
 import 'package:just_audio_background/just_audio_background.dart';
-Future<void> main() async{
-  WidgetsFlutterBinding.ensureInitialized();
+Future<void> main() async {
   await JustAudioBackground.init(
-    androidNotificationChannelId: 'com.example.offline_music.channel.audio',
-    androidNotificationChannelName: 'Music Playback',
-    androidNotificationIcon: 'mipmap/launcher_icon',
+    androidNotificationChannelId: 'com.ryanheise.bg_demo.channel.audio',
+    androidNotificationChannelName: 'Audio playback',
     androidNotificationOngoing: true,
     androidStopForegroundOnPause: true,
+    androidNotificationIcon: 'mipmap/launcher_icon',
   );
   await Hive.initFlutter();
   await Hive.openBox('favorites');
