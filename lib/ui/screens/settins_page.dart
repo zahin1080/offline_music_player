@@ -16,12 +16,18 @@ class SettingsPage extends StatelessWidget {
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
-          "S E T T I N G S",
+          "SETTINGS",
           style: TextStyle(
             color: theme.colorScheme.primary,
-            letterSpacing: 2,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+            letterSpacing: 2.5,
+            fontSize: 20,
+            fontWeight: FontWeight.w900,
+            shadows: [
+              Shadow(
+                color: theme.colorScheme.primary.withValues(alpha: 0.6),
+                blurRadius: 15,
+              )
+            ],
           ),
         ),
       ),
@@ -161,6 +167,40 @@ class SettingsPage extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          _buildSectionHeader("ACCESSIBILITY", theme),
+          Container(
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  spreadRadius: 1,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+              border: Border.all(
+                color: theme.colorScheme.primary.withValues(alpha: 0.1),
+              ),
+            ),
+            child: SwitchListTile(
+              secondary: Icon(
+                Icons.touch_app_rounded,
+                color: theme.colorScheme.primary,
+              ),
+              title: const Text("Assistive Touch"),
+              subtitle: const Text("Floating quick actions button"),
+              activeTrackColor: theme.colorScheme.primary.withValues(alpha: 0.5), activeThumbColor: theme.colorScheme.primary,
+              value: themeProvider.isAssistiveTouchEnabled,
+              onChanged: (val) {
+                themeProvider.toggleAssistiveTouch();
+              },
             ),
           ),
 

@@ -41,6 +41,7 @@ class TracksSubView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<MusicProvider>();
+    final theme = Theme.of(context);
     final songs = provider.songs;
 
     if (songs.isEmpty) {
@@ -59,37 +60,46 @@ class TracksSubView extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.inversePrimary.withValues(alpha: 0.7),
+                  color: theme.colorScheme.inversePrimary.withValues(alpha: 0.7),
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2)),
+                  border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.2)),
                 ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<SongSortOption>(
-                    value: provider.currentSort,
-                    icon: Padding(
-                      padding: const EdgeInsets.only(left: 4.0),
-                      child: Icon(Icons.sort_rounded, size: 18, color: Theme.of(context).colorScheme.primary),
-                    ),
-                    dropdownColor: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(16),
-                    style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 13),
-                    items: const [
-                      DropdownMenuItem(value: SongSortOption.title, child: Text("Name")),
-                      DropdownMenuItem(value: SongSortOption.dateAdded, child: Text("Date Added")),
-                      DropdownMenuItem(value: SongSortOption.artist, child: Text("Artist")),
-                      DropdownMenuItem(value: SongSortOption.playCount, child: Text("Most Played")),
-                      DropdownMenuItem(value: SongSortOption.duration, child: Text("Duration")),
+                child: PopupMenuButton<SongSortOption>(
+                  initialValue: provider.currentSort,
+                  color: theme.colorScheme.surface,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  position: PopupMenuPosition.under,
+                  onSelected: (val) => provider.sortSongs(val),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        {
+                          SongSortOption.title: "Name",
+                          SongSortOption.dateAdded: "Date Added",
+                          SongSortOption.artist: "Artist",
+                          SongSortOption.playCount: "Most Played",
+                          SongSortOption.duration: "Duration",
+                        }[provider.currentSort] ?? "Name",
+                        style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(Icons.sort_rounded, size: 18, color: theme.colorScheme.primary),
                     ],
-                    onChanged: (val) {
-                      if (val != null) provider.sortSongs(val);
-                    },
                   ),
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(value: SongSortOption.title, child: Text("Name")),
+                    const PopupMenuItem(value: SongSortOption.dateAdded, child: Text("Date Added")),
+                    const PopupMenuItem(value: SongSortOption.artist, child: Text("Artist")),
+                    const PopupMenuItem(value: SongSortOption.playCount, child: Text("Most Played")),
+                    const PopupMenuItem(value: SongSortOption.duration, child: Text("Duration")),
+                  ],
                 ),
               ),
             ],
@@ -143,36 +153,78 @@ class TracksSubView extends StatelessWidget {
                       onPressed: () => provider.toggleFavorite(song.id),
                     ),
                     PopupMenuButton<String>(
-                      icon: const Icon(Icons.more_vert_rounded),
+                      icon: Icon(Icons.more_vert_rounded, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+                      color: theme.colorScheme.surface,
+                      elevation: 8,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        side: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.1), width: 1),
+                      ),
+                      position: PopupMenuPosition.under,
                       onSelected: (val) {
                         if (val == "rename") {
                           _showRenameDialog(context, song);
                         } else {
                           provider.addSongToPlaylist(val, song.id);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Added to "$val"')),
+                            SnackBar(
+                              content: Text('Added to "$val"'),
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              backgroundColor: theme.colorScheme.surface,
+                            ),
                           );
                         }
                       },
                       itemBuilder: (context) {
-                        final playlistNames =
-                        provider.playlistBox.keys.cast<String>().toList();
+                        final playlistNames = provider.playlistBox.keys.cast<String>().toList();
                         return [
-                          const PopupMenuItem(
+                          PopupMenuItem(
                             value: "rename",
                             child: Row(
                               children: [
-                                Icon(Icons.edit_rounded, size: 20),
-                                SizedBox(width: 8),
-                                Text("Rename Song"),
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Icon(Icons.edit_rounded, size: 18, color: theme.colorScheme.primary),
+                                ),
+                                const SizedBox(width: 16),
+                                Text(
+                                  "Rename Song",
+                                  style: TextStyle(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
+                                ),
                               ],
                             ),
                           ),
-                          const PopupMenuDivider(),
+                          if (playlistNames.isNotEmpty) const PopupMenuDivider(),
+                          if (playlistNames.isNotEmpty)
+                            PopupMenuItem(
+                              enabled: false,
+                              height: 30,
+                              child: Text(
+                                "ADD TO PLAYLIST",
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface.withValues(alpha: 0.5), letterSpacing: 1.2),
+                              ),
+                            ),
                           ...playlistNames.map(
-                                (name) => PopupMenuItem(
+                            (name) => PopupMenuItem(
                               value: name,
-                              child: Text('Add to "$name"'),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.playlist_add_check_circle_rounded, size: 22, color: theme.colorScheme.primary.withValues(alpha: 0.8)),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Text(
+                                      name, 
+                                      style: TextStyle(fontWeight: FontWeight.w500, color: theme.colorScheme.onSurface.withValues(alpha: 0.9)), 
+                                      overflow: TextOverflow.ellipsis
+                                    )
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ];

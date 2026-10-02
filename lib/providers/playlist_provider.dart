@@ -118,12 +118,14 @@ class MusicProvider extends ChangeNotifier {
         final statuses = await [
           Permission.audio,
           Permission.storage,
+          Permission.manageExternalStorage,
         ].request().timeout(const Duration(seconds: 10));
 
         final aRes = statuses[Permission.audio];
         final sRes = statuses[Permission.storage];
+        final mRes = statuses[Permission.manageExternalStorage];
 
-        permissionGranted = (aRes?.isGranted ?? false) || (sRes?.isGranted ?? false);
+        permissionGranted = (aRes?.isGranted ?? false) || (sRes?.isGranted ?? false) || (mRes?.isGranted ?? false);
         _isPermanentlyDenied = (aRes?.isPermanentlyDenied ?? false) ||
             (sRes?.isPermanentlyDenied ?? false);
       }
@@ -194,6 +196,23 @@ class MusicProvider extends ChangeNotifier {
           _folders.putIfAbsent("Internal Audio", () => []).add(song);
         }
       }
+    }
+    
+    List<dynamic> customFoldersDynamic = _sessionBox.get('customFolders', defaultValue: <String>[]);
+    List<String> customFolders = customFoldersDynamic.cast<String>();
+    for (var folderName in customFolders) {
+      _folders.putIfAbsent(folderName, () => []);
+    }
+  }
+
+  void addCustomFolder(String name) {
+    if (!_folders.containsKey(name)) {
+      _folders[name] = [];
+      List<dynamic> customFoldersDynamic = _sessionBox.get('customFolders', defaultValue: <String>[]);
+      List<String> customFolders = customFoldersDynamic.cast<String>().toList();
+      customFolders.add(name);
+      _sessionBox.put('customFolders', customFolders);
+      notifyListeners();
     }
   }
 
@@ -366,6 +385,7 @@ class MusicProvider extends ChangeNotifier {
 
   void setSeekDuration(int seconds) {
     _seekDuration = seconds;
+    _sessionBox.put('seekDuration', seconds);
     notifyListeners();
   }
 
@@ -558,5 +578,11 @@ class MusicProvider extends ChangeNotifier {
     _audioPlayer.dispose();
     super.dispose();
   }
-}
 
+  double get volume => _audioPlayer.volume;
+  
+  Future<void> setVolume(double vol) async {
+    await _audioPlayer.setVolume(vol.clamp(0.0, 1.0));
+    notifyListeners();
+  }
+}

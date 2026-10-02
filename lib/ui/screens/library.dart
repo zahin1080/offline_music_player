@@ -3,13 +3,13 @@ import 'package:minimal_music_player/ui/screens/mostplayedsub.dart';
 import 'package:minimal_music_player/providers/playlist_provider.dart';
 import 'package:minimal_music_player/ui/screens/playlistsub.dart';
 import 'package:minimal_music_player/ui/screens/recentsub.dart';
-import 'package:minimal_music_player/ui/screens/tracksub.dart';
+
 import 'package:provider/provider.dart';
 import 'package:minimal_music_player/ui/screens/albumlist.dart';
 import 'albumview.dart';
 import 'favoratesub.dart';
 import 'foldersub.dart';
-import 'package:minimal_music_player/ui/screens/search_screen.dart';
+
 
 class LibraryTabHost extends StatelessWidget {
   const LibraryTabHost({super.key});
@@ -44,7 +44,7 @@ class LibraryTabHost extends StatelessWidget {
     }
 
     return DefaultTabController(
-      length: 8, // Fixed from 6 to 8 to match the number of tabs
+      length: 7, // Fixed from 6 to 8 to match the number of tabs
       child: Scaffold(
         appBar: AppBar(
           backgroundColor: Colors.transparent,
@@ -56,57 +56,52 @@ class LibraryTabHost extends StatelessWidget {
             onPressed: () => Scaffold.of(context).openDrawer(),
           ),
           title: Text(
-            "L I B R A R Y",
+            "LIBRARY",
             style: TextStyle(
               color: theme.colorScheme.primary,
-              letterSpacing: 2,
-              fontWeight: FontWeight.bold,
+              letterSpacing: 2.5,
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              shadows: [
+                Shadow(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.6),
+                  blurRadius: 15,
+                )
+              ],
             ),
           ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.search),
-              tooltip: "Search",
-              color: theme.colorScheme.inversePrimary,
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const SearchScreen()),
-                );
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              color: theme.colorScheme.primary,
-              onPressed: () => provider.requestPermissionAndFetch(),
-            ),
-          ],
+
           bottom: TabBar(
             isScrollable: true,
 
             tabs: const [
-              Tab(text: "Tracks"),
-              Tab(text: "Playlists"),
-              Tab(text: "Albums"),
-              Tab(text: "Artists"),
-              Tab(text: "Folders"),
-              Tab(text: "Favorites"),
-              Tab(text: "Recently Played"),
-              Tab(text: "Most Played"),
+              Tab(text: "Playlists", icon: Icon(Icons.queue_music_rounded, color: Colors.redAccent)),
+              Tab(text: "Albums", icon: Icon(Icons.album_rounded, color: Colors.redAccent)),
+              Tab(text: "Artists", icon: Icon(Icons.person_rounded, color: Colors.redAccent)),
+              Tab(text: "Folders", icon: Icon(Icons.folder_rounded, color: Colors.redAccent)),
+              Tab(text: "Favorites", icon: Icon(Icons.favorite_rounded, color: Colors.redAccent)),
+              Tab(text: "Recently Played", icon: Icon(Icons.history_rounded, color: Colors.redAccent)),
+              Tab(text: "Most Played", icon: Icon(Icons.trending_up_rounded, color: Colors.redAccent)),
             ],
           ),
         ),
-        body: const TabBarView(
-          children: [
-            TracksSubView(),
-            PlaylistsSubView(),
-            AlbumsSubView(),
-            ArtistsSubView(),
-            FoldersSubView(),
-            FavoritesSubView(),
-            RecentSubView(),
-            MostPlayedSubView(),
-          ],
+        body: RefreshIndicator(
+          onRefresh: () async {
+            await provider.requestPermissionAndFetch();
+          },
+          color: theme.colorScheme.primary,
+          backgroundColor: theme.colorScheme.surface,
+          child: const TabBarView(
+            children: [
+              PlaylistsSubView(),
+              AlbumsSubView(),
+              ArtistsSubView(),
+              FoldersSubView(),
+              FavoritesSubView(),
+              RecentSubView(),
+              MostPlayedSubView(),
+            ],
+          ),
         ),
       ),
     );

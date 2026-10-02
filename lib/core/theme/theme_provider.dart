@@ -5,6 +5,8 @@ import 'package:minimal_music_player/core/theme/light_mode.dart';
 
 class ThemeProvider extends ChangeNotifier {
   ThemeMode _themeMode = ThemeMode.system;
+  bool _isAssistiveTouchEnabled = false;
+  bool get isAssistiveTouchEnabled => _isAssistiveTouchEnabled;
   late final Box _settingsBox;
 
   ThemeMode get themeMode => _themeMode;
@@ -33,6 +35,7 @@ class ThemeProvider extends ChangeNotifier {
   void _initTheme() {
     _settingsBox = Hive.box('session');
     final savedMode = _settingsBox.get('themeMode', defaultValue: 'system');
+    _isAssistiveTouchEnabled = _settingsBox.get('assistiveTouch', defaultValue: false);
     switch (savedMode) {
       case 'light':
         _themeMode = ThemeMode.light;
@@ -54,6 +57,12 @@ class ThemeProvider extends ChangeNotifier {
         ? 'dark'
         : 'system';
     _settingsBox.put('themeMode', modeString);
+    notifyListeners();
+  }
+
+  void toggleAssistiveTouch() {
+    _isAssistiveTouchEnabled = !_isAssistiveTouchEnabled;
+    _settingsBox.put('assistiveTouch', _isAssistiveTouchEnabled);
     notifyListeners();
   }
 

@@ -5,6 +5,9 @@ import 'package:just_audio_background/just_audio_background.dart';
 import 'package:minimal_music_player/core/theme/theme_provider.dart';
 import 'package:minimal_music_player/providers/playlist_provider.dart';
 import 'package:minimal_music_player/ui/screens/home_page.dart';
+import 'package:minimal_music_player/widgets/assistive_touch.dart';
+
+final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   await JustAudioBackground.init(
@@ -42,7 +45,16 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: themeProvider.themeData,
       title: 'Offline Music Player',
+      navigatorKey: appNavigatorKey,
       home: HomePage(),
+      builder: (context, child) {
+        return Stack(
+          children: [
+            ?child,
+            const AssistiveTouchWidget(),
+          ],
+        );
+      },
     );
   }
 }
