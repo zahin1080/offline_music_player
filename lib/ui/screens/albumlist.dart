@@ -28,7 +28,7 @@ class ArtistsSubView extends StatelessWidget {
             child: Icon(Icons.person_rounded, color: Theme.of(context).colorScheme.primary),
           ),
           title: Text((artist.artist == '<unknown>') ? "Unknown Artist" : artist.artist),
-          subtitle: Text("${artist.numberOfTracks ?? 0} tracks"),
+          subtitle: Text("${artist.numberOfTracks} tracks"),
         );
       },
     );

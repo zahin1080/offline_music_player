@@ -28,14 +28,17 @@ class MyDrawer extends StatelessWidget {
             decoration: BoxDecoration(
               color: theme.colorScheme.primary.withValues(alpha: 0.15),
               shape: BoxShape.circle,
-              border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.4), width: 2),
+              border: Border.all(
+                color: theme.colorScheme.primary.withValues(alpha: 0.4),
+                width: 2,
+              ),
               boxShadow: [
                 BoxShadow(
                   color: theme.colorScheme.primary.withValues(alpha: 0.2),
                   blurRadius: 15,
                   spreadRadius: 2,
-                )
-              ]
+                ),
+              ],
             ),
             child: Icon(
               Icons.music_note_rounded,
@@ -51,8 +54,7 @@ class MyDrawer extends StatelessWidget {
             color: theme.colorScheme.primary.withValues(alpha: 0.2),
           ),
           const SizedBox(height: 40),
-          
-          // Settings Icon
+
           _buildDrawerIcon(Icons.settings_rounded, theme, () {
             Navigator.pop(context);
             Navigator.push(
@@ -79,11 +81,7 @@ class MyDrawer extends StatelessWidget {
             width: 1,
           ),
         ),
-        child: Icon(
-          icon,
-          size: 28,
-          color: theme.colorScheme.primary,
-        ),
+        child: Icon(icon, size: 28, color: theme.colorScheme.primary),
       ),
     );
   }

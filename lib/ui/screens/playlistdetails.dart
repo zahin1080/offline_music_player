@@ -1,6 +1,7 @@
+import 'package:minimal_music_player/widgets/query_artwork_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:on_audio_query/on_audio_query.dart';
+import 'package:media_browser/media_browser.dart';
 import 'package:minimal_music_player/providers/playlist_provider.dart';
 
 
@@ -75,7 +76,7 @@ class PlaylistDetailScreen extends StatelessWidget {
                             return ListTile(
                               leading: QueryArtworkWidget(
                                 id: song.id,
-                                type: ArtworkType.AUDIO,
+                                type: ArtworkType.audio,
                                 artworkWidth: 42,
                                 artworkHeight: 42,
                                 artworkBorder: BorderRadius.circular(6),
@@ -90,7 +91,7 @@ class PlaylistDetailScreen extends StatelessWidget {
                               ),
                               ),
                               title: Text(song.title, maxLines: 1),
-                              subtitle: Text((song.artist == null || song.artist == '<unknown>') ? "Unknown Artist" : song.artist!),
+                              subtitle: Text((song.artist == '<unknown>') ? "Unknown Artist" : song.artist),
                               trailing: IconButton(
                                 icon: Icon(
                                   isAdded ? Icons.check_circle : Icons.add_circle_outline,
@@ -117,20 +118,18 @@ class PlaylistDetailScreen extends StatelessWidget {
                           itemCount: p.albums.length,
                           itemBuilder: (context, index) {
                             final album = p.albums[index];
-                            final albumSongs = p.songs
-                                .where((s) => s.albumId == album.id)
-                                .toList();
+                            final albumSongs = p.songsForAlbum(album.album);
 
                             return ListTile(
                               leading: QueryArtworkWidget(
                                 id: album.id,
-                                type: ArtworkType.ALBUM,
+                                type: ArtworkType.album,
                                 artworkWidth: 42,
                                 artworkHeight: 42,
                                 artworkBorder: BorderRadius.circular(6),
                                 nullArtworkWidget: const Icon(Icons.album),
                               ),
-                              title: Text((album.album.toLowerCase() == '<unknown>' || album.album.toLowerCase() == 'download') ? "Unknown Album" : album.album, maxLines: 1),
+                              title: Text(album.album, maxLines: 1),
                               subtitle: Text("${albumSongs.length} tracks"),
                               trailing: ElevatedButton.icon(
                                 icon: const Icon(Icons.add, size: 16),
@@ -142,7 +141,7 @@ class PlaylistDetailScreen extends StatelessWidget {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text(
-                                        "Added ${albumSongs.length} tracks from \"${(album.album.toLowerCase() == '<unknown>' || album.album.toLowerCase() == 'download') ? "Unknown Album" : album.album}\"",
+                                        "Added ${albumSongs.length} tracks from \"${album.album}\"",
                                       ),
                                       duration: const Duration(seconds: 1),
                                     ),
@@ -206,7 +205,7 @@ class PlaylistDetailScreen extends StatelessWidget {
                   IconButton.filledTonal(
                     icon: const Icon(Icons.shuffle),
                     onPressed: () {
-                      final shuffled = List<SongModel>.from(songs)..shuffle();
+                      final shuffled = List<AudioModel>.from(songs)..shuffle();
                       provider.playSong(shuffled.first, queue: shuffled);
                     },
                   ),
@@ -251,7 +250,7 @@ class PlaylistDetailScreen extends StatelessWidget {
                 return ListTile(
                   leading: QueryArtworkWidget(
                     id: song.id,
-                    type: ArtworkType.AUDIO,
+                    type: ArtworkType.audio,
                     artworkWidth: 44,
                     artworkHeight: 44,
                     artworkBorder: BorderRadius.circular(8),
@@ -278,7 +277,7 @@ class PlaylistDetailScreen extends StatelessWidget {
                     ),
                   ),
                   subtitle: Text(
-                    (song.artist == null || song.artist == '<unknown>') ? "Unknown Artist" : song.artist!,
+                    (song.artist == '<unknown>') ? "Unknown Artist" : song.artist,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),

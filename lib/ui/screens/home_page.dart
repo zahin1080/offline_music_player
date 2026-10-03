@@ -79,7 +79,7 @@ class _HomePageState extends State<HomePage> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const SearchScreen()),
+                  MaterialPageRoute(builder: (_) => SearchScreen()),
                 );
               },
             ),
@@ -114,7 +114,7 @@ class _HomePageState extends State<HomePage> {
                     ),
             ),
 
-            // Floating Controls
+           
             Positioned(
               left: 12,
               right: 12,
@@ -124,13 +124,13 @@ class _HomePageState extends State<HomePage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Mini Player (On Top)
+                    
                     if (isPlaying) const MiniPlayerWidget(),
                     
-                    // Clean spacing between them
+                 
                     if (isPlaying) const SizedBox(height: 12),
 
-                    // Beautiful Floating Nav Pill
+                    
                     Container(
                       height: 64,
                       width: 160,

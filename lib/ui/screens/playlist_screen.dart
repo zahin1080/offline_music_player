@@ -1,6 +1,7 @@
+import 'package:minimal_music_player/widgets/query_artwork_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:minimal_music_player/providers/playlist_provider.dart';
-import 'package:on_audio_query/on_audio_query.dart';
+import 'package:media_browser/media_browser.dart';
 import 'package:provider/provider.dart';
 import 'package:minimal_music_player/ui/screens/playlistdetails.dart';
 
@@ -176,7 +177,7 @@ class PlaylistsScreen extends StatelessWidget {
                   child: songs.isNotEmpty
                       ? QueryArtworkWidget(
                     id: songs.first.id,
-                    type: ArtworkType.AUDIO,
+                    type: ArtworkType.audio,
                     artworkWidth: 48,
                     artworkHeight: 48,
                     artworkBorder: BorderRadius.circular(10),

@@ -1,115 +1,20 @@
-import 'dart:io';
+import 'package:minimal_music_player/services/library_service.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-
+import 'package:media_browser/media_browser.dart';
 import 'package:provider/provider.dart';
 
 import 'package:minimal_music_player/providers/playlist_provider.dart';
+import 'package:minimal_music_player/widgets/query_artwork_widget.dart';
 
 class FoldersSubView extends StatelessWidget {
   const FoldersSubView({super.key});
-
-  void _showAddSongsSheet(BuildContext context, ThemeData theme, MusicProvider provider, String folderName) {
-    List<dynamic> selectedIds = [];
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: theme.colorScheme.surface,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setState) {
-            return Container(
-              height: MediaQuery.of(context).size.height * 0.7,
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text("Add Songs to '$folderName'", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.primary)),
-                      ElevatedButton(
-                        onPressed: () async {
-                          if (selectedIds.isEmpty) return;
-                          
-                          // Copy files
-                          int count = 0;
-                          for (var id in selectedIds) {
-                            final song = provider.songs.firstWhere((s) => s.id == id);
-                            if (song.data.isNotEmpty) {
-                              try {
-                                final sourceFile = File(song.data);
-                                final fileName = sourceFile.path.split(Platform.pathSeparator).last;
-                                final targetFile = File('/storage/emulated/0/Download/$folderName/$fileName');
-                                if (!targetFile.existsSync()) {
-                                  sourceFile.copySync(targetFile.path);
-                                  count++;
-                                }
-                              } catch (e) {
-                                debugPrint("Copy error: $e");
-                              }
-                            }
-                          }
-                          
-                          Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: Text("Copied $count songs into folder!"),
-                            backgroundColor: theme.colorScheme.primary,
-                          ));
-                          provider.requestPermissionAndFetch(); // Refresh MediaStore
-                        },
-                        child: Text("Save (${selectedIds.length})"),
-                      )
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: provider.songs.length,
-                      itemBuilder: (ctx, idx) {
-                        final song = provider.songs[idx];
-                        final isSelected = selectedIds.contains(song.id);
-                        return ListTile(
-                          leading: Icon(Icons.music_note, color: theme.colorScheme.primary),
-                          title: Text(provider.getSongTitle(song), maxLines: 1),
-                          trailing: Checkbox(
-                            value: isSelected,
-                            onChanged: (val) {
-                              setState(() {
-                                if (val == true) {
-                                  selectedIds.add(song.id);
-                                } else {
-                                  selectedIds.remove(song.id);
-                                }
-                              });
-                            },
-                          ),
-                          onTap: () {
-                            setState(() {
-                              if (isSelected) {
-                                selectedIds.remove(song.id);
-                              } else {
-                                selectedIds.add(song.id);
-                              }
-                            });
-                          },
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
 
   void _showCreateFolderDialog(BuildContext context, ThemeData theme, MusicProvider provider) {
     final controller = TextEditingController();
     showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
           backgroundColor: theme.colorScheme.surface,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -117,7 +22,14 @@ class FoldersSubView extends StatelessWidget {
             children: [
               Icon(Icons.create_new_folder_rounded, color: theme.colorScheme.primary),
               const SizedBox(width: 8),
-              Text("Create New Folder", style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 18)),
+              Text(
+                "Create New Folder",
+                style: TextStyle(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
             ],
           ),
           content: TextField(
@@ -134,8 +46,11 @@ class FoldersSubView extends StatelessWidget {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text("Cancel", style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(
+                "Cancel",
+                style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+              ),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -143,29 +58,19 @@ class FoldersSubView extends StatelessWidget {
                 foregroundColor: theme.colorScheme.onPrimary,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              onPressed: () {
+              onPressed: () async {
+                final messenger = ScaffoldMessenger.of(context);
                 final name = controller.text.trim();
-                if (name.isNotEmpty) {
-                  try {
-                    // Try to create in the standard Music directory
-                    final dir = Directory('/storage/emulated/0/Music/$name');
-                    if (!dir.existsSync()) {
-                      dir.createSync(recursive: true);
-                      provider.addCustomFolder(name);
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text("Folder '$name' created!"),
-                        backgroundColor: theme.colorScheme.primary,
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ));
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Folder already exists.")));
-                    }
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Could not create folder: $e")));
-                  }
-                }
-                Navigator.pop(context);
+                Navigator.pop(dialogContext);
+                final error = await provider.createCustomFolder(name);
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text(error ?? "Folder '$name' created!"),
+                    backgroundColor: error == null ? theme.colorScheme.primary : null,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                );
               },
               child: const Text("Create"),
             ),
@@ -183,7 +88,7 @@ class FoldersSubView extends StatelessWidget {
 
     return ListView.builder(
       padding: const EdgeInsets.only(bottom: 90, top: 16),
-      itemCount: folders.length + 1, // +1 for the Create Folder button
+      itemCount: folders.length + 1,
       itemBuilder: (context, index) {
         if (index == 0) {
           return Padding(
@@ -199,7 +104,6 @@ class FoldersSubView extends StatelessWidget {
                   border: Border.all(
                     color: theme.colorScheme.primary.withValues(alpha: 0.3),
                     width: 2,
-                    style: BorderStyle.solid,
                   ),
                 ),
                 child: Row(
@@ -224,6 +128,7 @@ class FoldersSubView extends StatelessWidget {
         }
 
         final folder = folders[index - 1];
+        final count = folder.value.length;
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
           child: ListTile(
@@ -238,80 +143,362 @@ class FoldersSubView extends StatelessWidget {
               ),
               child: Icon(Icons.folder_rounded, color: theme.colorScheme.primary),
             ),
-            title: Text(folder.key, maxLines: 1, style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text("${folder.value.length} audio files", style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
-            trailing: Icon(Icons.arrow_forward_ios_rounded, size: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => Scaffold(
-                    backgroundColor: theme.colorScheme.surface,
-                    appBar: AppBar(
-                      backgroundColor: Colors.transparent,
-                      elevation: 0,
-                      title: Text(folder.key, style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold)),
-                      iconTheme: IconThemeData(color: theme.colorScheme.primary),
-                    ),
-                    body: folder.value.isEmpty 
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.folder_open_rounded, size: 80, color: theme.colorScheme.primary.withValues(alpha: 0.3)),
-                                const SizedBox(height: 16),
-                                Text(
-                                  "This folder is empty",
-                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  "Audio files placed in this directory\nwill appear here.",
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
-                                ),
-                              ],
-                            ),
-                          )
-                        : ListView.builder(
-                            itemCount: folder.value.length,
-                            itemBuilder: (ctx, idx) {
-                              final song = folder.value[idx];
-                              return ListTile(
-                                leading: Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(Icons.music_note_rounded, color: theme.colorScheme.primary),
-                                ),
-                                title: Text(provider.getSongTitle(song), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                subtitle: Text(
-                                  (song.artist == null || song.artist == '<unknown>') ? "Unknown Artist" : song.artist!,
-                                  style: TextStyle(color: theme.colorScheme.primary.withValues(alpha: 0.7)),
-                                ),
-                                onTap: () => provider.playSong(song, queue: folder.value),
-                              );
-                            },
-                          ),
-                    floatingActionButton: FloatingActionButton.extended(
-                      onPressed: () {
-                        // Show bottom sheet to pick songs
-                        _showAddSongsSheet(context, theme, provider, folder.key);
-                      },
-                      icon: const Icon(Icons.add_rounded),
-                      label: const Text("Add Songs"),
-                      backgroundColor: theme.colorScheme.primary,
-                      foregroundColor: theme.colorScheme.onPrimary,
-                    ),
-                  ),
-                ),
-              );
-            },
+            title: Text(
+              folder.key,
+              maxLines: 1,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: Text(
+              "$count ${count == 1 ? 'audio file' : 'audio files'}",
+              style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+            ),
+            trailing: Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 16,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+            ),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => FolderDetailScreen(folderName: folder.key)),
+            ),
           ),
         );
       },
+    );
+  }
+}
+
+/// Folder contents. Watches the provider so newly added songs appear live.
+class FolderDetailScreen extends StatefulWidget {
+  final String folderName;
+  const FolderDetailScreen({super.key, required this.folderName});
+
+  @override
+  State<FolderDetailScreen> createState() => _FolderDetailScreenState();
+}
+
+class _FolderDetailScreenState extends State<FolderDetailScreen> {
+  bool _isCopying = false;
+
+  Future<void> _copyIntoFolder(MusicProvider provider, List<String> paths) async {
+    if (paths.isEmpty) return;
+    final theme = Theme.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _isCopying = true);
+    final count = await provider.addFilesToFolder(widget.folderName, paths);
+    if (!mounted) return;
+    setState(() => _isCopying = false);
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          count > 0
+              ? "Added $count ${count == 1 ? 'song' : 'songs'} to '${widget.folderName}'"
+              : "No songs were added. Allow \"All files access\" if prompted.",
+        ),
+        backgroundColor: count > 0 ? theme.colorScheme.primary : null,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
+  Future<void> _pickFromDeviceStorage(MusicProvider provider) async {
+    try {
+      final files = await FilePicker.pickFiles(
+        type: FileType.audio,
+        dialogTitle: "Select songs",
+      );
+      final paths = files.map((f) => f.path).whereType<String>().toList();
+      await _copyIntoFolder(provider, paths);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Could not open storage: $e")),
+      );
+    }
+  }
+
+  void _showAddSongsSheet(MusicProvider provider) {
+    final theme = Theme.of(context);
+    final List<int> selectedIds = [];
+    final librarySongs = provider.songs
+        .where((s) => !(provider.folders[widget.folderName] ?? []).any((f) => f.id == s.id))
+        .toList();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: theme.colorScheme.surface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.75,
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Add Songs to '${widget.folderName}'",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // --- Browse the whole device storage ---
+                  InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _pickFromDeviceStorage(provider);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.4)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.sd_storage_rounded, color: theme.colorScheme.primary, size: 28),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Browse Device Storage",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  "Pick audio files from any folder on your phone",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(Icons.chevron_right_rounded, color: theme.colorScheme.primary),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          "Or choose from your library",
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.colorScheme.primary,
+                          foregroundColor: theme.colorScheme.onPrimary,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: selectedIds.isEmpty
+                            ? null
+                            : () {
+                                final paths = provider.songs
+                                    .where((s) => selectedIds.contains(s.id))
+                                    .map((s) => s.data)
+                                    .toList();
+                                Navigator.pop(sheetContext);
+                                _copyIntoFolder(provider, paths);
+                              },
+                        child: Text("Add (${selectedIds.length})"),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: librarySongs.isEmpty
+                        ? Center(
+                            child: Text(
+                              "No other songs in your library",
+                              style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+                            ),
+                          )
+                        : ListView.builder(
+                            itemCount: librarySongs.length,
+                            itemBuilder: (ctx, idx) {
+                              final song = librarySongs[idx];
+                              final isSelected = selectedIds.contains(song.id);
+                              void toggle() => setSheetState(() {
+                                    isSelected ? selectedIds.remove(song.id) : selectedIds.add(song.id);
+                                  });
+                              return ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                leading: Icon(Icons.music_note_rounded, color: theme.colorScheme.primary),
+                                title: Text(provider.getSongTitle(song), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                subtitle: Text(LibraryService.artistNameOf(song), maxLines: 1),
+                                trailing: Checkbox(
+                                  value: isSelected,
+                                  activeColor: theme.colorScheme.primary,
+                                  onChanged: (_) => toggle(),
+                                ),
+                                onTap: toggle,
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<MusicProvider>();
+    final theme = Theme.of(context);
+    final songs = provider.folders[widget.folderName] ?? [];
+
+    return Scaffold(
+      backgroundColor: theme.colorScheme.surface,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Text(
+          widget.folderName,
+          style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
+        ),
+        iconTheme: IconThemeData(color: theme.colorScheme.primary),
+        actions: [
+          IconButton(
+            tooltip: "Refresh",
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: () => provider.rescanLibrary(),
+          ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          songs.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.folder_open_rounded,
+                        size: 80,
+                        color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        "This folder is empty",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        "Tap \"Add Songs\" to copy music\nfrom your device storage.",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.only(bottom: 100),
+                  itemCount: songs.length,
+                  itemBuilder: (ctx, idx) {
+                    final song = songs[idx];
+                    final isPlaying = provider.currentSong?.id == song.id;
+                    return ListTile(
+                      leading: QueryArtworkWidget(
+                        id: song.id,
+                        type: ArtworkType.audio,
+                        artworkWidth: 48,
+                        artworkHeight: 48,
+                        artworkBorder: BorderRadius.circular(10),
+                        nullArtworkWidget: Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(Icons.music_note_rounded, color: theme.colorScheme.primary),
+                        ),
+                      ),
+                      title: Text(
+                        provider.getSongTitle(song),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontWeight: isPlaying ? FontWeight.bold : FontWeight.normal,
+                          color: isPlaying ? theme.colorScheme.primary : theme.colorScheme.onSurface,
+                        ),
+                      ),
+                      subtitle: Text(
+                        LibraryService.artistNameOf(song),
+                        style: TextStyle(color: theme.colorScheme.primary.withValues(alpha: 0.7)),
+                      ),
+                      onTap: () => provider.playSong(song, queue: songs),
+                    );
+                  },
+                ),
+          if (_isCopying)
+            Container(
+              color: Colors.black.withValues(alpha: 0.4),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(color: theme.colorScheme.primary),
+                    const SizedBox(height: 16),
+                    const Text("Copying songs...", style: TextStyle(color: Colors.white)),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _isCopying ? null : () => _showAddSongsSheet(provider),
+        icon: const Icon(Icons.add_rounded),
+        label: const Text("Add Songs"),
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: theme.colorScheme.onPrimary,
+      ),
     );
   }
 }

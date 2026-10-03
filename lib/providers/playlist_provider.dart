@@ -1,20 +1,26 @@
+import 'package:minimal_music_player/models/music_models.dart';
 import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
-import 'package:on_audio_query/on_audio_query.dart';
+import 'package:media_browser/media_browser.dart' hide PermissionStatus;
 import 'package:permission_handler/permission_handler.dart';
-enum SongSortOption {title, artist, dateAdded, duration, playCount }
+import 'package:minimal_music_player/services/library_service.dart';
+import 'package:minimal_music_player/services/audio_service.dart';
+
+enum SongSortOption { title, artist, dateAdded, duration, playCount }
+
 class MusicProvider extends ChangeNotifier {
-  final OnAudioQuery _audioQuery = OnAudioQuery();
-  final AudioPlayer _audioPlayer = AudioPlayer();
-  final Map<String, List<SongModel>> _folders = {};
-  List<SongModel> _songs = [];
+  final MediaBrowser _mediaBrowser = MediaBrowser();
+  final LibraryService _libraryService = LibraryService();
+  final AudioPlayerService _audioService = AudioPlayerService();
+  final Map<String, List<AudioModel>> _folders = {};
+  List<AudioModel> _songs = [];
   List<AlbumModel> _albums = [];
   List<ArtistModel> _artists = [];
-  List<SongModel> _currentQueue = [];
+  List<AudioModel> _currentQueue = [];
   int _currentIndex = -1;
 
   bool _isLoading = true;
@@ -34,16 +40,17 @@ class MusicProvider extends ChangeNotifier {
   late final Box _sessionBox;
   late final Box _titlesBox;
 
-  List<SongModel> get songs => _songs;
+  List<AudioModel> get songs => _songs;
   List<AlbumModel> get albums => _albums;
   List<ArtistModel> get artists => _artists;
-  Map<String, List<SongModel>> get folders => _folders;
-  List<SongModel> get currentQueue => _currentQueue;
-  SongModel? get currentSong => (_currentIndex >= 0 && _currentIndex < _currentQueue.length)
+  Map<String, List<AudioModel>> get folders => _folders;
+  List<AudioModel> get currentQueue => _currentQueue;
+  AudioModel? get currentSong =>
+      (_currentIndex >= 0 && _currentIndex < _currentQueue.length)
       ? _currentQueue[_currentIndex]
       : null;
 
-  AudioPlayer get player => _audioPlayer;
+  AudioPlayer get player => _audioService.player;
   bool get isLoading => _isLoading;
   bool get hasPermission => _hasPermissions;
   bool get isPermanentlyDenied => _isPermanentlyDenied;
@@ -54,7 +61,7 @@ class MusicProvider extends ChangeNotifier {
   Box get playlistBox => _playlistBox;
   SongSortOption get currentSort => _currentSort;
 
-  List<SongModel> get downloadedSongs {
+  List<AudioModel> get downloadedSongs {
     return _songs.where((song) {
       final path = song.data.toLowerCase();
       return path.contains('/download/') || path.contains('/downloads/');
@@ -76,18 +83,18 @@ class MusicProvider extends ChangeNotifier {
         ? Hive.box('custom_titles')
         : await Hive.openBox('custom_titles');
 
-    _audioPlayer.playerStateStream.listen((state) {
+    _audioService.player.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed) {
         if (_loopMode == LoopMode.one) {
-          _audioPlayer.seek(Duration.zero);
-          _audioPlayer.play();
+          _audioService.player.seek(Duration.zero);
+          _audioService.player.play();
         } else {
           playNext();
         }
       }
     });
 
-    _audioPlayer.positionStream.listen((position) {
+    _audioService.player.positionStream.listen((position) {
       if (currentSong != null) {
         _sessionBox.put('lastPosition', position.inMilliseconds);
       }
@@ -125,8 +132,12 @@ class MusicProvider extends ChangeNotifier {
         final sRes = statuses[Permission.storage];
         final mRes = statuses[Permission.manageExternalStorage];
 
-        permissionGranted = (aRes?.isGranted ?? false) || (sRes?.isGranted ?? false) || (mRes?.isGranted ?? false);
-        _isPermanentlyDenied = (aRes?.isPermanentlyDenied ?? false) ||
+        permissionGranted =
+            (aRes?.isGranted ?? false) ||
+            (sRes?.isGranted ?? false) ||
+            (mRes?.isGranted ?? false);
+        _isPermanentlyDenied =
+            (aRes?.isPermanentlyDenied ?? false) ||
             (sRes?.isPermanentlyDenied ?? false);
       }
 
@@ -144,91 +155,146 @@ class MusicProvider extends ChangeNotifier {
     }
   }
 
+  static const String customFolderRoot = '/storage/emulated/0/Music';
+  static const String _legacyCustomFolderRoot = '/storage/emulated/0/Download';
+
+  List<String> get _customFolderNames {
+    final List<dynamic> raw = _sessionBox.get(
+      'customFolders',
+      defaultValue: <String>[],
+    );
+    return raw.cast<String>().toList();
+  }
+
+  String customFolderPath(String name) {
+    final musicDir = Directory('$customFolderRoot/$name');
+    if (musicDir.existsSync()) return musicDir.path;
+    final legacyDir = Directory('$_legacyCustomFolderRoot/$name');
+    if (legacyDir.existsSync()) return legacyDir.path;
+    return musicDir.path;
+  }
+
+  bool isCustomFolder(String name) => _customFolderNames.contains(name);
+
+  List<AudioModel> songsForAlbum(String albumName) =>
+      _songs.where((s) => LibraryService.albumNameOf(s) == albumName).toList();
+
+  List<AudioModel> songsForArtist(String artistName) => _songs
+      .where((s) => LibraryService.artistNameOf(s) == artistName)
+      .toList();
+
   Future<void> rescanLibrary() async {
     try {
-      final rawSongs = await _audioQuery.querySongs(
-        sortType: SongSortType.TITLE,
-        orderType: OrderType.ASC_OR_SMALLER,
-        uriType: UriType.EXTERNAL,
-        ignoreCase: true,
-      );
-
-      _songs = rawSongs.where((song) {
-        if (song.data.isEmpty) return false;
-        
-        // --- NEW: ONLY fetch from Download folder ---
-        if (!song.data.toLowerCase().contains('/download/')) return false;
-
-        try {
-          return File(song.data).existsSync();
-        } catch (_) {
-          return true;
-        }
-      }).toList();
-
-      final allAlbums = await _audioQuery.queryAlbums();
-      final validAlbumIds = _songs.map((s) => s.albumId).whereType<int>().toSet();
-      _albums = allAlbums.where((a) => validAlbumIds.contains(a.id)).toList();
-      final allArtists = await _audioQuery.queryArtists();
-      final validArtistIds = _songs.map((s) => s.artistId).whereType<int>().toSet();
-      _artists = allArtists.where((a) => validArtistIds.contains(a.id)).toList();
-
+      await _libraryService.clearScanCache();
+      final result = await _libraryService.scanLibrary(_customFolderNames);
+      _songs = result.songs;
+      _albums = result.albums;
+      _artists = result.artists;
       _buildFolderIndex();
       _applySort();
     } catch (e) {
-      log("Scan error: $e");
+      log("Scan error: ");
     }
     notifyListeners();
   }
 
   void _buildFolderIndex() {
     _folders.clear();
-    for (var song in _songs) {
-      if (song.data.isNotEmpty) {
-        try {
-          final file = File(song.data);
-          final folderPath = file.parent.path;
-          final folderName = folderPath.split(Platform.pathSeparator).last;
-          if (folderName.isNotEmpty) {
-            _folders.putIfAbsent(folderName, () => []).add(song);
-          }
-        } catch (_) {
-          _folders.putIfAbsent("Internal Audio", () => []).add(song);
+    for (final name in _customFolderNames) {
+      _folders[name] = [];
+    }
+    for (final song in _songs) {
+      if (song.data.isEmpty) continue;
+      try {
+        final folderName = File(song.data).parent.path.split('/').last;
+        if (folderName.isNotEmpty) {
+          _folders.putIfAbsent(folderName, () => []).add(song);
         }
+      } catch (_) {
+        _folders.putIfAbsent("Internal Audio", () => []).add(song);
       }
     }
-    
-    List<dynamic> customFoldersDynamic = _sessionBox.get('customFolders', defaultValue: <String>[]);
-    List<String> customFolders = customFoldersDynamic.cast<String>();
-    for (var folderName in customFolders) {
-      _folders.putIfAbsent(folderName, () => []);
-    }
   }
 
-  void addCustomFolder(String name) {
-    if (!_folders.containsKey(name)) {
-      _folders[name] = [];
-      List<dynamic> customFoldersDynamic = _sessionBox.get('customFolders', defaultValue: <String>[]);
-      List<String> customFolders = customFoldersDynamic.cast<String>().toList();
-      customFolders.add(name);
-      _sessionBox.put('customFolders', customFolders);
-      notifyListeners();
+  Future<String?> createCustomFolder(String name) async {
+    final clean = name.trim().replaceAll(RegExp(r'[\\/:*?"<>|]'), '');
+    if (clean.isEmpty) return 'Please enter a valid folder name';
+    if (_folders.containsKey(clean)) return "Folder '$clean' already exists";
+
+    try {
+      if (!await Permission.manageExternalStorage.isGranted) {
+        await Permission.manageExternalStorage.request();
+      }
+      final dir = Directory('$customFolderRoot/$clean');
+      if (!dir.existsSync()) dir.createSync(recursive: true);
+    } catch (e) {
+      return 'Could not create folder. Allow "All files access" for this app.';
     }
+
+    final names = _customFolderNames..add(clean);
+    await _sessionBox.put('customFolders', names);
+    _folders[clean] = [];
+    notifyListeners();
+    return null;
   }
 
-  String getSongTitle(SongModel song) {
+  Future<int> addFilesToFolder(
+    String folderName,
+    List<String> sourcePaths,
+  ) async {
+    if (!await Permission.manageExternalStorage.isGranted) {
+      await Permission.manageExternalStorage.request();
+    }
+
+    final targetDir = Directory(customFolderPath(folderName));
+    if (!targetDir.existsSync()) targetDir.createSync(recursive: true);
+
+    int copied = 0;
+    for (final source in sourcePaths) {
+      try {
+        final src = File(source);
+        if (!src.existsSync()) continue;
+        String fileName = src.path.split('/').last;
+        String targetPath = '${targetDir.path}/$fileName';
+
+        if (src.absolute.path == File(targetPath).absolute.path) continue;
+
+        int n = 1;
+        while (File(targetPath).existsSync()) {
+          final dot = fileName.lastIndexOf('.');
+          final base = dot > 0 ? fileName.substring(0, dot) : fileName;
+          final ext = dot > 0 ? fileName.substring(dot) : '';
+          targetPath = '${targetDir.path}/$base ($n)$ext';
+          n++;
+        }
+
+        await src.copy(targetPath);
+        copied++;
+        try {
+          await _mediaBrowser.scanMedia(targetPath);
+        } catch (_) {}
+      } catch (e) {
+        log('Copy error: $e');
+      }
+    }
+
+    await rescanLibrary();
+    return copied;
+  }
+
+  String getSongTitle(AudioModel song) {
     String title = _titlesBox.get(song.id, defaultValue: song.title) as String;
     if (title == '<unknown>') return 'Unknown Track';
     return title;
   }
 
-  String getSongArtist(SongModel song) {
-    String artist = song.artist ?? 'Unknown Artist';
+  String getSongArtist(AudioModel song) {
+    String artist = song.artist;
     if (artist == '<unknown>') return 'Unknown Artist';
     return artist;
   }
 
-  Future<void> renameSong(SongModel song, String newTitle) async {
+  Future<void> renameSong(AudioModel song, String newTitle) async {
     if (newTitle.trim().isEmpty) return;
     await _titlesBox.put(song.id, newTitle.trim());
 
@@ -257,16 +323,23 @@ class MusicProvider extends ChangeNotifier {
   void _applySort() {
     switch (_currentSort) {
       case SongSortOption.title:
-        _songs.sort((a, b) => getSongTitle(a).toLowerCase().compareTo(getSongTitle(b).toLowerCase()));
+        _songs.sort(
+          (a, b) => getSongTitle(
+            a,
+          ).toLowerCase().compareTo(getSongTitle(b).toLowerCase()),
+        );
         break;
       case SongSortOption.artist:
-        _songs.sort((a, b) => (a.artist ?? '').toLowerCase().compareTo((b.artist ?? '').toLowerCase()));
+        _songs.sort(
+          (a, b) =>
+              (a.artist).toLowerCase().compareTo((b.artist).toLowerCase()),
+        );
         break;
       case SongSortOption.dateAdded:
-        _songs.sort((a, b) => (b.dateAdded ?? 0).compareTo(a.dateAdded ?? 0));
+        _songs.sort((a, b) => (b.dateAdded).compareTo(a.dateAdded));
         break;
       case SongSortOption.duration:
-        _songs.sort((a, b) => (b.duration ?? 0).compareTo(a.duration ?? 0));
+        _songs.sort((a, b) => (b.duration).compareTo(a.duration));
         break;
       case SongSortOption.playCount:
         _songs.sort((a, b) {
@@ -290,23 +363,32 @@ class MusicProvider extends ChangeNotifier {
         final song = _songs[matchIndex];
 
         final audioSource = AudioSource.uri(
-          Uri.parse(song.uri!),
+          Uri.file(song.data),
           tag: MediaItem(
             id: song.id.toString(),
-            album: song.album ?? "Unknown Album",
+            album: song.album,
             title: getSongTitle(song),
-            artist: (song.artist == null || song.artist == '<unknown>') ? "Unknown Artist" : song.artist!,
-            artUri: Uri.parse("content://media/external/audio/albumart/${song.albumId}"),
+            artist: (song.artist == '<unknown>')
+                ? "Unknown Artist"
+                : song.artist,
+            artUri: Uri.parse(
+              "content://media/external/audio/albumart/${song.id}",
+            ),
           ),
         );
-        _audioPlayer.setAudioSource(
+        _audioService.player.setAudioSource(
           audioSource,
           initialPosition: Duration(milliseconds: lastPositionMs),
         );
       }
     }
   }
-  Future<void> playSong(SongModel song, {List<SongModel>? queue, Duration? startPosition}) async {
+
+  Future<void> playSong(
+    AudioModel song, {
+    List<AudioModel>? queue,
+    Duration? startPosition,
+  }) async {
     _playbackError = null;
     try {
       if (song.data.isNotEmpty) {
@@ -321,21 +403,24 @@ class MusicProvider extends ChangeNotifier {
       _currentQueue = queue != null ? List.from(queue) : List.from(_songs);
       _currentIndex = _currentQueue.indexWhere((item) => item.id == song.id);
       final audioSource = AudioSource.uri(
-        Uri.parse(song.uri!),
+        Uri.file(song.data),
         tag: MediaItem(
           id: song.id.toString(),
-          album: (song.album == null || song.album == '<unknown>' || song.album!.trim().isEmpty || song.album!.toLowerCase() == 'download') ? "Unknown Album" : song.album!,
-          title: getSongTitle(song).trim().isNotEmpty ? getSongTitle(song) : "Unknown Title",
+          album: LibraryService.albumNameOf(song),
+          title: getSongTitle(song).trim().isNotEmpty
+              ? getSongTitle(song)
+              : "Unknown Title",
           artist: getSongArtist(song),
-          artUri: song.albumId != null
-              ? Uri.parse("content://media/external/audio/albumart/${song.albumId}")
-              : null,
+          artUri: null,
         ),
       );
 
-      await _audioPlayer.setAudioSource(audioSource, initialPosition: startPosition);
-      await _audioPlayer.setSpeed(_playbackSpeed);
-      _audioPlayer.play();
+      await _audioService.player.setAudioSource(
+        audioSource,
+        initialPosition: startPosition,
+      );
+      await _audioService.player.setSpeed(_playbackSpeed);
+      _audioService.player.play();
 
       _historyBox.put(song.id, DateTime.now().millisecondsSinceEpoch);
       int currentCount = _statsBox.get(song.id, defaultValue: 0) as int;
@@ -352,10 +437,10 @@ class MusicProvider extends ChangeNotifier {
   }
 
   void togglePlayPause() {
-    if (_audioPlayer.playing) {
-      _audioPlayer.pause();
+    if (_audioService.player.playing) {
+      _audioService.player.pause();
     } else {
-      _audioPlayer.play();
+      _audioService.player.play();
     }
     notifyListeners();
   }
@@ -379,9 +464,13 @@ class MusicProvider extends ChangeNotifier {
     }
   }
 
-  void seek(Duration pos) => _audioPlayer.seek(pos);
-  void seekForward() => _audioPlayer.seek(_audioPlayer.position + Duration(seconds: _seekDuration));
-  void seekRewind() => _audioPlayer.seek(_audioPlayer.position - Duration(seconds: _seekDuration));
+  void seek(Duration pos) => _audioService.player.seek(pos);
+  void seekForward() => _audioService.player.seek(
+    _audioService.player.position + Duration(seconds: _seekDuration),
+  );
+  void seekRewind() => _audioService.player.seek(
+    _audioService.player.position - Duration(seconds: _seekDuration),
+  );
 
   void setSeekDuration(int seconds) {
     _seekDuration = seconds;
@@ -391,7 +480,7 @@ class MusicProvider extends ChangeNotifier {
 
   void setPlaybackSpeed(double speed) {
     _playbackSpeed = speed;
-    _audioPlayer.setSpeed(speed);
+    _audioService.player.setSpeed(speed);
     notifyListeners();
   }
 
@@ -417,12 +506,12 @@ class MusicProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void addToQueue(SongModel song) {
+  void addToQueue(AudioModel song) {
     _currentQueue.add(song);
     notifyListeners();
   }
 
-  void playNextInQueue(SongModel song) {
+  void playNextInQueue(AudioModel song) {
     if (_currentIndex >= 0 && _currentIndex < _currentQueue.length) {
       _currentQueue.insert(_currentIndex + 1, song);
     } else {
@@ -440,7 +529,6 @@ class MusicProvider extends ChangeNotifier {
   }
 
   void reorderQueue(int oldIndex, int newIndex) {
-    // if (oldIndex < newIndex) newIndex -= 1; // Removed because onReorderItem adjusts it automatically
     final item = _currentQueue.removeAt(oldIndex);
     _currentQueue.insert(newIndex, item);
     if (currentSong != null) {
@@ -452,7 +540,7 @@ class MusicProvider extends ChangeNotifier {
   void clearQueue() {
     _currentQueue.clear();
     _currentIndex = -1;
-    _audioPlayer.stop();
+    _audioService.player.stop();
     notifyListeners();
   }
 
@@ -467,19 +555,24 @@ class MusicProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  List<SongModel> getFavorites() => _songs.where((song) => isFavorite(song.id)).toList();
+  List<AudioModel> getFavorites() =>
+      _songs.where((song) => isFavorite(song.id)).toList();
 
-  List<SongModel> getRecentlyPlayed({int limit = 20}) {
+  List<AudioModel> getRecentlyPlayed({int limit = 20}) {
     final keys = _historyBox.keys.toList();
     keys.sort((a, b) {
       final valA = _historyBox.get(a);
       final valB = _historyBox.get(b);
-      final timeA = valA is int ? valA : DateTime.tryParse(valA.toString())?.millisecondsSinceEpoch ?? 0;
-      final timeB = valB is int ? valB : DateTime.tryParse(valB.toString())?.millisecondsSinceEpoch ?? 0;
+      final timeA = valA is int
+          ? valA
+          : DateTime.tryParse(valA.toString())?.millisecondsSinceEpoch ?? 0;
+      final timeB = valB is int
+          ? valB
+          : DateTime.tryParse(valB.toString())?.millisecondsSinceEpoch ?? 0;
       return timeB.compareTo(timeA);
     });
 
-    final List<SongModel> recents = [];
+    final List<AudioModel> recents = [];
     for (final key in keys) {
       try {
         final song = _songs.firstWhere((s) => s.id == key);
@@ -489,13 +582,13 @@ class MusicProvider extends ChangeNotifier {
     return recents.take(limit).toList();
   }
 
-  List<SongModel> getRecentlyAdded() {
-    final sorted = List<SongModel>.from(_songs);
-    sorted.sort((a, b) => (b.dateAdded ?? 0).compareTo(a.dateAdded ?? 0));
+  List<AudioModel> getRecentlyAdded() {
+    final sorted = List<AudioModel>.from(_songs);
+    sorted.sort((a, b) => (b.dateAdded).compareTo(a.dateAdded));
     return sorted.take(20).toList();
   }
 
-  List<SongModel> getMostPlayed({int limit = 20}) {
+  List<AudioModel> getMostPlayed({int limit = 20}) {
     final keys = _statsBox.keys.toList();
     keys.sort((a, b) {
       final countA = (_statsBox.get(a) as int?) ?? 0;
@@ -503,7 +596,7 @@ class MusicProvider extends ChangeNotifier {
       return countB.compareTo(countA);
     });
 
-    final List<SongModel> mostPlayed = [];
+    final List<AudioModel> mostPlayed = [];
     for (final key in keys) {
       try {
         final song = _songs.firstWhere((s) => s.id == key);
@@ -515,7 +608,8 @@ class MusicProvider extends ChangeNotifier {
     return mostPlayed.take(limit).toList();
   }
 
-  int getSongPlayCount(int songId) => (_statsBox.get(songId, defaultValue: 0) as int?) ?? 0;
+  int getSongPlayCount(int songId) =>
+      (_statsBox.get(songId, defaultValue: 0) as int?) ?? 0;
 
   void clearMostPlayed() => clearPlayStatistics();
 
@@ -558,7 +652,7 @@ class MusicProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  List<SongModel> getPlaylistSongs(String name) {
+  List<AudioModel> getPlaylistSongs(String name) {
     List<dynamic> ids = _playlistBox.get(name, defaultValue: <int>[]);
     return _songs.where((s) => ids.contains(s.id)).toList();
   }
@@ -575,14 +669,14 @@ class MusicProvider extends ChangeNotifier {
 
   @override
   void dispose() {
-    _audioPlayer.dispose();
+    _audioService.player.dispose();
     super.dispose();
   }
 
-  double get volume => _audioPlayer.volume;
-  
+  double get volume => _audioService.player.volume;
+
   Future<void> setVolume(double vol) async {
-    await _audioPlayer.setVolume(vol.clamp(0.0, 1.0));
+    await _audioService.player.setVolume(vol.clamp(0.0, 1.0));
     notifyListeners();
   }
 }

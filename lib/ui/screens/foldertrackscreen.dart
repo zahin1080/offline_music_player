@@ -1,11 +1,12 @@
+import 'package:minimal_music_player/widgets/query_artwork_widget.dart';
 import 'package:minimal_music_player/providers/playlist_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:on_audio_query/on_audio_query.dart';
+import 'package:media_browser/media_browser.dart';
 
 class FolderTracksScreen extends StatelessWidget {
   final String folderName;
-  final List<SongModel> songs;
+  final List<AudioModel> songs;
 
   const FolderTracksScreen({
     super.key,
@@ -42,7 +43,7 @@ class FolderTracksScreen extends StatelessWidget {
           return ListTile(
             leading: QueryArtworkWidget(
               id: song.id,
-              type: ArtworkType.AUDIO,
+              type: ArtworkType.audio,
               artworkBorder: BorderRadius.circular(8),
               nullArtworkWidget: Container(
                 width: 48,
@@ -63,7 +64,7 @@ class FolderTracksScreen extends StatelessWidget {
                 color: isCurrent ? theme.colorScheme.primary : null,
               ),
             ),
-            subtitle: Text((song.artist == null || song.artist == '<unknown>') ? "Unknown Artist" : song.artist!, maxLines: 1),
+            subtitle: Text((song.artist == '<unknown>') ? "Unknown Artist" : song.artist, maxLines: 1),
             trailing: IconButton(
               icon: Icon(
                 provider.isFavorite(song.id) ? Icons.favorite : Icons.favorite_border,

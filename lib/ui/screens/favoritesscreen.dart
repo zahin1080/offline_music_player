@@ -1,7 +1,8 @@
+import 'package:minimal_music_player/widgets/query_artwork_widget.dart';
 import 'package:minimal_music_player/providers/playlist_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:on_audio_query/on_audio_query.dart';
+import 'package:media_browser/media_browser.dart';
 class FavoritesScreen extends StatelessWidget {
   const FavoritesScreen({super.key});
 
@@ -46,7 +47,7 @@ class FavoritesScreen extends StatelessWidget {
           return ListTile(
             leading: QueryArtworkWidget(
               id: song.id,
-              type: ArtworkType.AUDIO,
+              type: ArtworkType.audio,
               artworkBorder: BorderRadius.circular(8),
               nullArtworkWidget: Container(
                 width: 48,
@@ -67,7 +68,7 @@ class FavoritesScreen extends StatelessWidget {
                 color: isCurrent ? theme.colorScheme.primary : null,
               ),
             ),
-            subtitle: Text((song.artist == null || song.artist == '<unknown>') ? "Unknown Artist" : song.artist!, maxLines: 1),
+            subtitle: Text((song.artist == '<unknown>') ? "Unknown Artist" : song.artist, maxLines: 1),
             trailing: IconButton(
               icon: const Icon(Icons.favorite, color: Colors.red),
               onPressed: () => provider.toggleFavorite(song.id),

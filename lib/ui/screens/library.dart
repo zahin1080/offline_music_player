@@ -10,7 +10,6 @@ import 'albumview.dart';
 import 'favoratesub.dart';
 import 'foldersub.dart';
 
-
 class LibraryTabHost extends StatelessWidget {
   const LibraryTabHost({super.key});
 
@@ -44,7 +43,7 @@ class LibraryTabHost extends StatelessWidget {
     }
 
     return DefaultTabController(
-      length: 7, // Fixed from 6 to 8 to match the number of tabs
+      length: 7,
       child: Scaffold(
         appBar: AppBar(
           backgroundColor: Colors.transparent,
@@ -66,7 +65,7 @@ class LibraryTabHost extends StatelessWidget {
                 Shadow(
                   color: theme.colorScheme.primary.withValues(alpha: 0.6),
                   blurRadius: 15,
-                )
+                ),
               ],
             ),
           ),
@@ -75,13 +74,34 @@ class LibraryTabHost extends StatelessWidget {
             isScrollable: true,
 
             tabs: const [
-              Tab(text: "Playlists", icon: Icon(Icons.queue_music_rounded, color: Colors.redAccent)),
-              Tab(text: "Albums", icon: Icon(Icons.album_rounded, color: Colors.redAccent)),
-              Tab(text: "Artists", icon: Icon(Icons.person_rounded, color: Colors.redAccent)),
-              Tab(text: "Folders", icon: Icon(Icons.folder_rounded, color: Colors.redAccent)),
-              Tab(text: "Favorites", icon: Icon(Icons.favorite_rounded, color: Colors.redAccent)),
-              Tab(text: "Recently Played", icon: Icon(Icons.history_rounded, color: Colors.redAccent)),
-              Tab(text: "Most Played", icon: Icon(Icons.trending_up_rounded, color: Colors.redAccent)),
+              Tab(
+                text: "Playlists",
+                icon: Icon(Icons.queue_music_rounded, color: Colors.redAccent),
+              ),
+              Tab(
+                text: "Albums",
+                icon: Icon(Icons.album_rounded, color: Colors.redAccent),
+              ),
+              Tab(
+                text: "Artists",
+                icon: Icon(Icons.person_rounded, color: Colors.redAccent),
+              ),
+              Tab(
+                text: "Folders",
+                icon: Icon(Icons.folder_rounded, color: Colors.redAccent),
+              ),
+              Tab(
+                text: "Favorites",
+                icon: Icon(Icons.favorite_rounded, color: Colors.redAccent),
+              ),
+              Tab(
+                text: "Recently Played",
+                icon: Icon(Icons.history_rounded, color: Colors.redAccent),
+              ),
+              Tab(
+                text: "Most Played",
+                icon: Icon(Icons.trending_up_rounded, color: Colors.redAccent),
+              ),
             ],
           ),
         ),
@@ -107,4 +127,3 @@ class LibraryTabHost extends StatelessWidget {
     );
   }
 }
-

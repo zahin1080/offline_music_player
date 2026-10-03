@@ -1,7 +1,8 @@
+import 'package:minimal_music_player/widgets/query_artwork_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:minimal_music_player/widgets/queuereordersheet.dart';
-import 'package:on_audio_query/on_audio_query.dart';
+import 'package:media_browser/media_browser.dart';
 
 import 'package:minimal_music_player/providers/playlist_provider.dart';
 import 'package:provider/provider.dart';
@@ -59,7 +60,9 @@ class FullPlayerSheet extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.redAccent.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: Colors.redAccent.withValues(alpha: 0.3),
+                ),
               ),
               child: Row(
                 children: [
@@ -68,7 +71,10 @@ class FullPlayerSheet extends StatelessWidget {
                   Expanded(
                     child: Text(
                       provider.playbackError!,
-                      style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+                      style: const TextStyle(
+                        color: Colors.redAccent,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                 ],
@@ -87,7 +93,9 @@ class FullPlayerSheet extends StatelessWidget {
                       borderRadius: BorderRadius.circular(36),
                       boxShadow: [
                         BoxShadow(
-                          color: theme.colorScheme.primary.withValues(alpha: 0.25),
+                          color: theme.colorScheme.primary.withValues(
+                            alpha: 0.25,
+                          ),
                           blurRadius: 40,
                           spreadRadius: 8,
                           offset: const Offset(0, 10),
@@ -98,16 +106,22 @@ class FullPlayerSheet extends StatelessWidget {
                       borderRadius: BorderRadius.circular(36),
                       child: QueryArtworkWidget(
                         id: song.id,
-                        type: ArtworkType.AUDIO,
+                        type: ArtworkType.audio,
                         artworkWidth: 320,
                         artworkHeight: 320,
                         nullArtworkWidget: Container(
                           width: 320,
                           height: 320,
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                            color: theme.colorScheme.primary.withValues(
+                              alpha: 0.1,
+                            ),
                           ),
-                          child: Icon(Icons.music_note_rounded, size: 120, color: theme.colorScheme.primary),
+                          child: Icon(
+                            Icons.music_note_rounded,
+                            size: 120,
+                            color: theme.colorScheme.primary,
+                          ),
                         ),
                       ),
                     ),
@@ -142,7 +156,8 @@ class FullPlayerSheet extends StatelessWidget {
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontSize: 16,
-                                    color: theme.colorScheme.inversePrimary.withValues(alpha: 0.7),
+                                    color: theme.colorScheme.inversePrimary
+                                        .withValues(alpha: 0.7),
                                   ),
                                 ),
                               ],
@@ -151,8 +166,14 @@ class FullPlayerSheet extends StatelessWidget {
                           IconButton(
                             iconSize: 32,
                             icon: Icon(
-                              provider.isFavorite(song.id) ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                              color: provider.isFavorite(song.id) ? Colors.redAccent : theme.colorScheme.inversePrimary.withValues(alpha: 0.5),
+                              provider.isFavorite(song.id)
+                                  ? Icons.favorite_rounded
+                                  : Icons.favorite_border_rounded,
+                              color: provider.isFavorite(song.id)
+                                  ? Colors.redAccent
+                                  : theme.colorScheme.inversePrimary.withValues(
+                                      alpha: 0.5,
+                                    ),
                             ),
                             onPressed: () => provider.toggleFavorite(song.id),
                           ),
@@ -172,26 +193,55 @@ class FullPlayerSheet extends StatelessWidget {
                           SliderTheme(
                             data: SliderThemeData(
                               trackHeight: 6,
-                              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
-                              overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
+                              thumbShape: const RoundSliderThumbShape(
+                                enabledThumbRadius: 8,
+                              ),
+                              overlayShape: const RoundSliderOverlayShape(
+                                overlayRadius: 16,
+                              ),
                               activeTrackColor: theme.colorScheme.primary,
-                              inactiveTrackColor: theme.colorScheme.primary.withValues(alpha: 0.15),
+                              inactiveTrackColor: theme.colorScheme.primary
+                                  .withValues(alpha: 0.15),
                               thumbColor: theme.colorScheme.primary,
                             ),
                             child: Slider(
                               min: 0,
-                              max: total.inMilliseconds.toDouble() > 0 ? total.inMilliseconds.toDouble() : 1.0,
-                              value: pos.inMilliseconds.clamp(0, total.inMilliseconds).toDouble(),
-                              onChanged: (val) => provider.seek(Duration(milliseconds: val.toInt())),
+                              max: total.inMilliseconds.toDouble() > 0
+                                  ? total.inMilliseconds.toDouble()
+                                  : 1.0,
+                              value: pos.inMilliseconds
+                                  .clamp(0, total.inMilliseconds)
+                                  .toDouble(),
+                              onChanged: (val) => provider.seek(
+                                Duration(milliseconds: val.toInt()),
+                              ),
                             ),
                           ),
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16.0,
+                            ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(_formatDuration(pos), style: TextStyle(fontSize: 13, color: theme.colorScheme.inversePrimary.withValues(alpha: 0.7), fontWeight: FontWeight.w600)),
-                                Text(_formatDuration(total), style: TextStyle(fontSize: 13, color: theme.colorScheme.inversePrimary.withValues(alpha: 0.7), fontWeight: FontWeight.w600)),
+                                Text(
+                                  _formatDuration(pos),
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: theme.colorScheme.inversePrimary
+                                        .withValues(alpha: 0.7),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                Text(
+                                  _formatDuration(total),
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: theme.colorScheme.inversePrimary
+                                        .withValues(alpha: 0.7),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -205,17 +255,22 @@ class FullPlayerSheet extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       IconButton(
-                        icon: Icon(Icons.skip_previous_rounded, color: theme.colorScheme.onSurface),
+                        icon: Icon(
+                          Icons.skip_previous_rounded,
+                          color: theme.colorScheme.onSurface,
+                        ),
                         iconSize: 42,
                         onPressed: () => provider.playPrevious(),
                       ),
                       IconButton(
-                        icon: Icon(Icons.fast_rewind_rounded, color: theme.colorScheme.onSurface),
+                        icon: Icon(
+                          Icons.fast_rewind_rounded,
+                          color: theme.colorScheme.onSurface,
+                        ),
                         iconSize: 32,
                         onPressed: () => provider.seekRewind(),
                       ),
-                      
-                      // Giant Play/Pause Button
+
                       GestureDetector(
                         onTap: () => provider.togglePlayPause(),
                         child: Container(
@@ -226,15 +281,19 @@ class FullPlayerSheet extends StatelessWidget {
                             color: theme.colorScheme.primary,
                             boxShadow: [
                               BoxShadow(
-                                color: theme.colorScheme.primary.withValues(alpha: 0.4),
+                                color: theme.colorScheme.primary.withValues(
+                                  alpha: 0.4,
+                                ),
                                 blurRadius: 20,
                                 spreadRadius: 4,
                                 offset: const Offset(0, 4),
-                              )
+                              ),
                             ],
                           ),
                           child: Icon(
-                            provider.player.playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                            provider.player.playing
+                                ? Icons.pause_rounded
+                                : Icons.play_arrow_rounded,
                             size: 42,
                             color: Colors.white,
                           ),
@@ -242,35 +301,50 @@ class FullPlayerSheet extends StatelessWidget {
                       ),
 
                       IconButton(
-                        icon: Icon(Icons.fast_forward_rounded, color: theme.colorScheme.onSurface),
+                        icon: Icon(
+                          Icons.fast_forward_rounded,
+                          color: theme.colorScheme.onSurface,
+                        ),
                         iconSize: 32,
                         onPressed: () => provider.seekForward(),
                       ),
                       IconButton(
-                        icon: Icon(Icons.skip_next_rounded, color: theme.colorScheme.onSurface),
+                        icon: Icon(
+                          Icons.skip_next_rounded,
+                          color: theme.colorScheme.onSurface,
+                        ),
                         iconSize: 42,
                         onPressed: () => provider.playNext(),
                       ),
                     ],
                   ),
 
-                  // Bottom Utilities
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       IconButton(
-                        icon: Icon(Icons.shuffle_rounded, color: provider.isShuffle ? theme.colorScheme.primary : theme.colorScheme.inversePrimary.withValues(alpha: 0.4)),
+                        icon: Icon(
+                          Icons.shuffle_rounded,
+                          color: provider.isShuffle
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.inversePrimary.withValues(
+                                  alpha: 0.4,
+                                ),
+                        ),
                         iconSize: 24,
                         onPressed: () => provider.toggleShuffle(),
                       ),
                       TextButton.icon(
                         style: TextButton.styleFrom(
-                          foregroundColor: theme.colorScheme.inversePrimary.withValues(alpha: 0.8),
+                          foregroundColor: theme.colorScheme.inversePrimary
+                              .withValues(alpha: 0.8),
                         ),
                         icon: const Icon(Icons.speed_rounded, size: 20),
                         label: Text("${provider.playbackSpeed}x Speed"),
                         onPressed: () {
-                          final nextSpeed = provider.playbackSpeed == 1.0 ? 1.5 : (provider.playbackSpeed == 1.5 ? 2.0 : 1.0);
+                          final nextSpeed = provider.playbackSpeed == 1.0
+                              ? 1.5
+                              : (provider.playbackSpeed == 1.5 ? 2.0 : 1.0);
                           provider.setPlaybackSpeed(nextSpeed);
                         },
                       ),
@@ -279,13 +353,22 @@ class FullPlayerSheet extends StatelessWidget {
                           foregroundColor: theme.colorScheme.primary,
                         ),
                         icon: const Icon(Icons.queue_music_rounded, size: 20),
-                        label: const Text("Up Next", style: TextStyle(fontWeight: FontWeight.bold)),
+                        label: const Text(
+                          "Up Next",
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                         onPressed: () => _openQueueModal(context),
                       ),
                       IconButton(
                         icon: Icon(
-                          provider.loopMode == LoopMode.one ? Icons.repeat_one_rounded : Icons.repeat_rounded,
-                          color: provider.loopMode != LoopMode.off ? theme.colorScheme.primary : theme.colorScheme.inversePrimary.withValues(alpha: 0.4),
+                          provider.loopMode == LoopMode.one
+                              ? Icons.repeat_one_rounded
+                              : Icons.repeat_rounded,
+                          color: provider.loopMode != LoopMode.off
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.inversePrimary.withValues(
+                                  alpha: 0.4,
+                                ),
                         ),
                         iconSize: 24,
                         onPressed: () => provider.toggleLoop(),
@@ -302,4 +385,3 @@ class FullPlayerSheet extends StatelessWidget {
     );
   }
 }
-

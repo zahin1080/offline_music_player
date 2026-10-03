@@ -1,7 +1,9 @@
+import 'package:minimal_music_player/models/music_models.dart';
+import 'package:minimal_music_player/widgets/query_artwork_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:minimal_music_player/providers/playlist_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:on_audio_query/on_audio_query.dart';
+import 'package:media_browser/media_browser.dart';
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
 
@@ -26,11 +28,11 @@ class _SearchScreenState extends State<SearchScreen> {
     final cleanQuery = _query.trim().toLowerCase();
 
     final matchingSongs = cleanQuery.isEmpty
-        ? <SongModel>[]
+        ? <AudioModel>[]
         : provider.songs
         .where((s) =>
     provider.getSongTitle(s).toLowerCase().contains(cleanQuery) ||
-        (s.artist?.toLowerCase().contains(cleanQuery) ?? false))
+        s.artist.toLowerCase().contains(cleanQuery))
         .toList();
 
     final matchingAlbums = cleanQuery.isEmpty
@@ -141,7 +143,7 @@ class _SearchScreenState extends State<SearchScreen> {
               return ListTile(
                 leading: QueryArtworkWidget(
                   id: song.id,
-                  type: ArtworkType.AUDIO,
+                  type: ArtworkType.audio,
                   artworkBorder: BorderRadius.circular(8),
                   nullArtworkWidget: Container(
                     width: 48,
@@ -162,7 +164,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     color: isSelected ? const Color(0xFF38BDF8) : null,
                   ),
                 ),
-                subtitle: Text((song.artist == null || song.artist == '<unknown>') ? "Unknown Artist" : song.artist!, maxLines: 1),
+                subtitle: Text((song.artist == '<unknown>') ? "Unknown Artist" : song.artist, maxLines: 1),
                 trailing: IconButton(
                   icon: Icon(
                     provider.isFavorite(song.id) ? Icons.favorite : Icons.favorite_border,
@@ -181,7 +183,7 @@ class _SearchScreenState extends State<SearchScreen> {
             ...matchingAlbums.map((album) => ListTile(
               leading: QueryArtworkWidget(
                 id: album.id,
-                type: ArtworkType.ALBUM,
+                type: ArtworkType.album,
                 artworkBorder: BorderRadius.circular(8),
                 nullArtworkWidget: Container(
                   width: 48,
@@ -196,9 +198,7 @@ class _SearchScreenState extends State<SearchScreen> {
               title: Text(album.album, maxLines: 1, overflow: TextOverflow.ellipsis),
               subtitle: Text("${album.numOfSongs} tracks"),
               onTap: () {
-                final albumSongs = provider.songs
-                    .where((s) => s.albumId == album.id)
-                    .toList();
+                final albumSongs = provider.songsForAlbum(album.album);
                 if (albumSongs.isNotEmpty) {
                   provider.playSong(albumSongs.first, queue: albumSongs);
                 }
@@ -214,11 +214,9 @@ class _SearchScreenState extends State<SearchScreen> {
                 child: Icon(Icons.person, color: theme.colorScheme.inversePrimary),
               ),
               title: Text(artist.artist, maxLines: 1),
-              subtitle: Text("${artist.numberOfTracks ?? 0} tracks"),
+              subtitle: Text("${artist.numberOfTracks} tracks"),
               onTap: () {
-                final artistSongs = provider.songs
-                    .where((s) => s.artistId == artist.id)
-                    .toList();
+                final artistSongs = provider.songsForArtist(artist.artist);
                 if (artistSongs.isNotEmpty) {
                   provider.playSong(artistSongs.first, queue: artistSongs);
                 }

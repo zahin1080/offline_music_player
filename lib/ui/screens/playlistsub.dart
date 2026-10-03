@@ -1,5 +1,6 @@
+import 'package:minimal_music_player/widgets/query_artwork_widget.dart';
 import 'package:flutter/material.dart';
-import 'package:on_audio_query/on_audio_query.dart';
+import 'package:media_browser/media_browser.dart';
 import 'package:provider/provider.dart';
 
 import 'package:minimal_music_player/providers/playlist_provider.dart';
@@ -19,7 +20,13 @@ class PlaylistsSubView extends StatelessWidget {
           children: [
             Icon(Icons.playlist_add_rounded, color: theme.colorScheme.primary),
             const SizedBox(width: 8),
-            Text("New Playlist", style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold)),
+            Text(
+              "New Playlist",
+              style: TextStyle(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ],
         ),
         content: TextField(
@@ -28,22 +35,34 @@ class PlaylistsSubView extends StatelessWidget {
           style: TextStyle(color: theme.colorScheme.onSurface),
           decoration: InputDecoration(
             hintText: "Playlist Name",
-            hintStyle: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+            hintStyle: TextStyle(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+            ),
             focusedBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
+              borderSide: BorderSide(
+                color: theme.colorScheme.primary,
+                width: 2,
+              ),
             ),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text("Cancel", style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
+            child: Text(
+              "Cancel",
+              style: TextStyle(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: theme.colorScheme.primary,
               foregroundColor: theme.colorScheme.onPrimary,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             onPressed: () {
               final name = controller.text.trim();
@@ -59,7 +78,11 @@ class PlaylistsSubView extends StatelessWidget {
     );
   }
 
-  void _showPlaylistOptions(BuildContext context, String playlistName, ThemeData theme) {
+  void _showPlaylistOptions(
+    BuildContext context,
+    String playlistName,
+    ThemeData theme,
+  ) {
     final provider = context.read<MusicProvider>();
     showModalBottomSheet(
       context: context,
@@ -73,20 +96,36 @@ class PlaylistsSubView extends StatelessWidget {
           child: Wrap(
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20.0,
+                  vertical: 8.0,
+                ),
                 child: Text(
                   playlistName,
-                  style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 16),
+                  style: TextStyle(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
               ),
               const Divider(),
               ListTile(
                 leading: Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: theme.colorScheme.primary.withValues(alpha: 0.1), shape: BoxShape.circle),
-                  child: Icon(Icons.edit_rounded, color: theme.colorScheme.primary),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.edit_rounded,
+                    color: theme.colorScheme.primary,
+                  ),
                 ),
-                title: const Text("Rename Playlist", style: TextStyle(fontWeight: FontWeight.bold)),
+                title: const Text(
+                  "Rename Playlist",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
                 onTap: () {
                   Navigator.pop(ctx);
                   _showRenameDialog(context, playlistName, theme);
@@ -95,21 +134,43 @@ class PlaylistsSubView extends StatelessWidget {
               ListTile(
                 leading: Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: Colors.redAccent.withValues(alpha: 0.1), shape: BoxShape.circle),
-                  child: const Icon(Icons.delete_rounded, color: Colors.redAccent),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.delete_rounded,
+                    color: Colors.redAccent,
+                  ),
                 ),
-                title: const Text("Delete Playlist", style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                title: const Text(
+                  "Delete Playlist",
+                  style: TextStyle(
+                    color: Colors.redAccent,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 onTap: () {
                   showDialog(
                     context: context,
                     builder: (dCtx) => AlertDialog(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
                       title: const Text("Delete Playlist"),
-                      content: Text("Are you sure you want to delete '$playlistName'?"),
+                      content: Text(
+                        "Are you sure you want to delete '$playlistName'?",
+                      ),
                       actions: [
-                        TextButton(onPressed: () => Navigator.pop(dCtx), child: const Text("Cancel")),
+                        TextButton(
+                          onPressed: () => Navigator.pop(dCtx),
+                          child: const Text("Cancel"),
+                        ),
                         ElevatedButton(
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.redAccent,
+                            foregroundColor: Colors.white,
+                          ),
                           onPressed: () {
                             provider.deletePlaylist(playlistName);
                             Navigator.pop(dCtx);
@@ -129,7 +190,11 @@ class PlaylistsSubView extends StatelessWidget {
     );
   }
 
-  void _showRenameDialog(BuildContext context, String oldName, ThemeData theme) {
+  void _showRenameDialog(
+    BuildContext context,
+    String oldName,
+    ThemeData theme,
+  ) {
     final controller = TextEditingController(text: oldName);
     showDialog(
       context: context,
@@ -140,7 +205,13 @@ class PlaylistsSubView extends StatelessWidget {
           children: [
             Icon(Icons.edit_rounded, color: theme.colorScheme.primary),
             const SizedBox(width: 8),
-            Text("Rename Playlist", style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold)),
+            Text(
+              "Rename Playlist",
+              style: TextStyle(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ],
         ),
         content: TextField(
@@ -149,20 +220,30 @@ class PlaylistsSubView extends StatelessWidget {
           style: TextStyle(color: theme.colorScheme.onSurface),
           decoration: InputDecoration(
             focusedBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
+              borderSide: BorderSide(
+                color: theme.colorScheme.primary,
+                width: 2,
+              ),
             ),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text("Cancel", style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
+            child: Text(
+              "Cancel",
+              style: TextStyle(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: theme.colorScheme.primary,
               foregroundColor: theme.colorScheme.onPrimary,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             onPressed: () {
               final newName = controller.text.trim();
@@ -197,7 +278,9 @@ class PlaylistsSubView extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w900,
-                  color: theme.colorScheme.inversePrimary.withValues(alpha: 0.8),
+                  color: theme.colorScheme.inversePrimary.withValues(
+                    alpha: 0.8,
+                  ),
                 ),
               ),
               ElevatedButton.icon(
@@ -209,9 +292,14 @@ class PlaylistsSubView extends StatelessWidget {
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
-                    side: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.3)),
+                    side: BorderSide(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                    ),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                 ),
                 onPressed: () => _showCreateDialog(context, theme),
               ),
@@ -219,7 +307,6 @@ class PlaylistsSubView extends StatelessWidget {
           ),
         ),
 
-        // Playlists list
         Expanded(
           child: playlistNames.isEmpty
               ? Center(
@@ -229,15 +316,27 @@ class PlaylistsSubView extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                          color: theme.colorScheme.primary.withValues(
+                            alpha: 0.1,
+                          ),
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(Icons.queue_music_rounded, size: 64, color: theme.colorScheme.primary),
+                        child: Icon(
+                          Icons.queue_music_rounded,
+                          size: 64,
+                          color: theme.colorScheme.primary,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       Text(
                         "No playlists created yet",
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.7,
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 24),
                       ElevatedButton.icon(
@@ -246,8 +345,13 @@ class PlaylistsSubView extends StatelessWidget {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: theme.colorScheme.primary,
                           foregroundColor: theme.colorScheme.onPrimary,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
                         ),
                         onPressed: () => _showCreateDialog(context, theme),
                       ),
@@ -262,7 +366,10 @@ class PlaylistsSubView extends StatelessWidget {
                     final songs = provider.getPlaylistSongs(name);
 
                     return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12.0,
+                        vertical: 6.0,
+                      ),
                       child: Material(
                         color: Colors.transparent,
                         child: InkWell(
@@ -271,16 +378,22 @@ class PlaylistsSubView extends StatelessWidget {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => PlaylistDetailScreen(playlistName: name),
+                                builder: (_) =>
+                                    PlaylistDetailScreen(playlistName: name),
                               ),
                             );
                           },
                           child: Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                              color: theme.colorScheme.surfaceContainerHighest
+                                  .withValues(alpha: 0.3),
                               borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.05)),
+                              border: Border.all(
+                                color: theme.colorScheme.primary.withValues(
+                                  alpha: 0.05,
+                                ),
+                              ),
                             ),
                             child: Row(
                               children: [
@@ -289,33 +402,44 @@ class PlaylistsSubView extends StatelessWidget {
                                   width: 56,
                                   height: 56,
                                   decoration: BoxDecoration(
-                                    color: Colors.lightBlue.shade400, // Matching the image's vibrant blue
+                                    color: Colors.lightBlue.shade400,
                                     borderRadius: BorderRadius.circular(12),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.lightBlue.shade400.withValues(alpha: 0.4),
+                                        color: Colors.lightBlue.shade400
+                                            .withValues(alpha: 0.4),
                                         blurRadius: 8,
                                         offset: const Offset(0, 4),
-                                      )
+                                      ),
                                     ],
                                   ),
                                   child: songs.isNotEmpty
                                       ? QueryArtworkWidget(
                                           id: songs.first.id,
-                                          type: ArtworkType.AUDIO,
+                                          type: ArtworkType.audio,
                                           artworkWidth: 56,
                                           artworkHeight: 56,
-                                          artworkBorder: BorderRadius.circular(12),
-                                          nullArtworkWidget: const Icon(Icons.queue_music_rounded, color: Colors.white, size: 28),
+                                          artworkBorder: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          nullArtworkWidget: const Icon(
+                                            Icons.queue_music_rounded,
+                                            color: Colors.white,
+                                            size: 28,
+                                          ),
                                         )
-                                      : const Icon(Icons.queue_music_rounded, color: Colors.white, size: 28),
+                                      : const Icon(
+                                          Icons.queue_music_rounded,
+                                          color: Colors.white,
+                                          size: 28,
+                                        ),
                                 ),
                                 const SizedBox(width: 16),
-                                
-                                // Text details
+
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       Text(
@@ -332,24 +456,39 @@ class PlaylistsSubView extends StatelessWidget {
                                       Text(
                                         "${songs.length} tracks",
                                         style: TextStyle(
-                                          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                          color: theme.colorScheme.onSurface
+                                              .withValues(alpha: 0.6),
                                           fontSize: 13,
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
-                                
-                                // Actions
+
                                 if (songs.isNotEmpty)
                                   IconButton(
-                                    icon: Icon(Icons.play_circle_outline_rounded, color: theme.colorScheme.primary),
+                                    icon: Icon(
+                                      Icons.play_circle_outline_rounded,
+                                      color: theme.colorScheme.primary,
+                                    ),
                                     iconSize: 28,
-                                    onPressed: () => provider.playSong(songs.first, queue: songs),
+                                    onPressed: () => provider.playSong(
+                                      songs.first,
+                                      queue: songs,
+                                    ),
                                   ),
                                 IconButton(
-                                  icon: Icon(Icons.more_vert_rounded, color: theme.colorScheme.primary.withValues(alpha: 0.6)),
-                                  onPressed: () => _showPlaylistOptions(context, name, theme),
+                                  icon: Icon(
+                                    Icons.more_vert_rounded,
+                                    color: theme.colorScheme.primary.withValues(
+                                      alpha: 0.6,
+                                    ),
+                                  ),
+                                  onPressed: () => _showPlaylistOptions(
+                                    context,
+                                    name,
+                                    theme,
+                                  ),
                                 ),
                               ],
                             ),

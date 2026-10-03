@@ -1,5 +1,6 @@
+import 'package:minimal_music_player/widgets/query_artwork_widget.dart';
 import 'package:flutter/material.dart';
-import 'package:on_audio_query/on_audio_query.dart';
+import 'package:media_browser/media_browser.dart';
 import 'package:minimal_music_player/providers/playlist_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:minimal_music_player/ui/screens/fullplayer.dart';
@@ -44,7 +45,7 @@ class MiniPlayerWidget extends StatelessWidget {
               borderRadius: BorderRadius.circular(28),
               child: QueryArtworkWidget(
                 id: song.id,
-                type: ArtworkType.AUDIO,
+                type: ArtworkType.audio,
                 artworkWidth: 56,
                 artworkHeight: 56,
                 nullArtworkWidget: Container(

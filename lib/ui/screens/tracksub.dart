@@ -1,12 +1,13 @@
+import 'package:minimal_music_player/widgets/query_artwork_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:on_audio_query/on_audio_query.dart';
+import 'package:media_browser/media_browser.dart';
 
 import 'package:minimal_music_player/providers/playlist_provider.dart';
 class TracksSubView extends StatelessWidget {
   const TracksSubView({super.key});
 
-  void _showRenameDialog(BuildContext context, SongModel song) {
+  void _showRenameDialog(BuildContext context, AudioModel song) {
     final provider = context.read<MusicProvider>();
     final controller = TextEditingController(text: provider.getSongTitle(song));
 
@@ -116,7 +117,7 @@ class TracksSubView extends StatelessWidget {
               return ListTile(
                 leading: QueryArtworkWidget(
                   id: song.id,
-                  type: ArtworkType.AUDIO,
+                  type: ArtworkType.audio,
                   artworkBorder: BorderRadius.circular(8),
                   nullArtworkWidget: Container(
                     width: 48,

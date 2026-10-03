@@ -1,7 +1,8 @@
+import 'package:minimal_music_player/widgets/query_artwork_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:minimal_music_player/providers/playlist_provider.dart';
-import 'package:on_audio_query/on_audio_query.dart';
+import 'package:media_browser/media_browser.dart';
 
 class MostPlayedSubView extends StatelessWidget {
   const MostPlayedSubView({super.key});
@@ -73,12 +74,11 @@ class MostPlayedSubView extends StatelessWidget {
                     final isCurrent = provider.currentSong?.id == song.id;
 
                     final artistName =
-                        (song.artist == null ||
-                            song.artist!.toLowerCase() == '<unknown>' ||
-                            song.artist!.toLowerCase() == 'download' ||
-                            song.artist!.trim().isEmpty)
+                        (song.artist.toLowerCase() == '<unknown>' ||
+                            song.artist.toLowerCase() == 'download' ||
+                            song.artist.trim().isEmpty)
                         ? "Unknown Artist"
-                        : song.artist!;
+                        : song.artist;
                     final titleName =
                         (song.title.toLowerCase() == '<unknown>' ||
                             song.title.toLowerCase() == 'download')
@@ -126,7 +126,7 @@ class MostPlayedSubView extends StatelessWidget {
                             children: [
                               QueryArtworkWidget(
                                 id: song.id,
-                                type: ArtworkType.AUDIO,
+                                type: ArtworkType.audio,
                                 artworkBorder: BorderRadius.circular(12),
                                 nullArtworkWidget: Container(
                                   width: 50,
