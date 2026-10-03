@@ -1,12 +1,12 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:media_browser/media_browser.dart';
-import 'package:minimal_music_player/models/music_models.dart';
+import 'package:minimal_music_player/album_artist/albumartist.dart';
 
 class LibraryScanResult {
   final List<AudioModel> songs;
-  final List<AlbumModel> albums;
-  final List<ArtistModel> artists;
+  final List<Album1> albums;
+  final List<Artist1> artists;
 
   LibraryScanResult({
     required this.songs,
@@ -21,7 +21,9 @@ class LibraryService {
   Future<void> clearScanCache() async {
     try {
       await _mediaBrowser.clearScanCache();
-    } catch (_) { /* ignore */ }
+    } catch (_) {
+      /* ignore */
+    }
   }
 
   Future<LibraryScanResult> scanLibrary(List<String> customFolderNames) async {
@@ -150,7 +152,9 @@ class LibraryService {
       }
       try {
         if (!File(song.data).existsSync()) continue;
-      } catch (_) { /* ignore */ }
+      } catch (_) {
+        /* ignore */
+      }
       byPath.putIfAbsent(song.data, () => song);
     }
 
@@ -165,14 +169,16 @@ class LibraryService {
             byPath[entity.path] = _audioModelFromFile(entity);
           }
         }
-      } catch (e) { /* ignore */ }
+      } catch (e) {
+        /* ignore */
+      }
     }
 
     final songs = byPath.values.toList();
 
-    final Map<String, AlbumModel> albumMap = {};
+    final Map<String, Album1> albumMap = {};
     final Map<String, int> albumCounts = {};
-    final Map<String, ArtistModel> artistMap = {};
+    final Map<String, Artist1> artistMap = {};
     final Map<String, int> artistCounts = {};
 
     for (final song in songs) {
@@ -180,25 +186,21 @@ class LibraryService {
       albumCounts[albumName] = (albumCounts[albumName] ?? 0) + 1;
       albumMap.putIfAbsent(
         albumName,
-        () => AlbumModel(
-          id: song.id,
-          album: albumName,
-          artist: artistNameOf(song),
-        ),
+        () => Album1(id: song.id, album: albumName, artist: artistNameOf(song)),
       );
 
       final artistName = artistNameOf(song);
       artistCounts[artistName] = (artistCounts[artistName] ?? 0) + 1;
       artistMap.putIfAbsent(
         artistName,
-        () => ArtistModel(id: song.id, artist: artistName),
+        () => Artist1(id: song.id, artist: artistName),
       );
     }
 
     final albums =
         albumMap.entries
             .map(
-              (e) => AlbumModel(
+              (e) => Album1(
                 id: e.value.id,
                 album: e.key,
                 artist: e.value.artist,
@@ -213,7 +215,7 @@ class LibraryService {
     final artists =
         artistMap.entries
             .map(
-              (e) => ArtistModel(
+              (e) => Artist1(
                 id: e.value.id,
                 artist: e.key,
                 numberOfTracks: artistCounts[e.key]!,

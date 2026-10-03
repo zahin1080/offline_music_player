@@ -4,7 +4,7 @@ import 'package:media_browser/media_browser.dart';
 import 'package:provider/provider.dart';
 
 import 'package:minimal_music_player/providers/playlist_provider.dart';
-import 'package:minimal_music_player/ui/screens/playlistdetails.dart';
+import 'package:minimal_music_player/ui/screens/playlistdetailsscreen.dart';
 
 class PlaylistsSubView extends StatelessWidget {
   const PlaylistsSubView({super.key});

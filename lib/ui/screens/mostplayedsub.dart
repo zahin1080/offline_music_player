@@ -1,3 +1,4 @@
+import 'package:minimal_music_player/utils/top_toast.dart';
 import 'package:minimal_music_player/widgets/query_artwork_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -280,10 +281,8 @@ class MostPlayedSubView extends StatelessWidget {
               onPressed: () {
                 provider.clearMostPlayed();
                 Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Statistics cleared!")),
-                );
-              },
+                TopToast.show(context, "Statistics cleared!");
+},
               style: ElevatedButton.styleFrom(
                 backgroundColor: theme.colorScheme.error,
                 foregroundColor: Colors.white,

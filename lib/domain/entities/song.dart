@@ -1,3 +1,4 @@
+import 'package:minimal_music_player/utils/top_toast.dart';
 import 'package:minimal_music_player/widgets/query_artwork_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:media_browser/media_browser.dart';
@@ -112,13 +113,8 @@ class SongsListView extends StatelessWidget {
                     _showRenameDialog(context, song);
                   } else {
                     provider.addSongToPlaylist(val, song.id);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Added to "$val"'),
-                        duration: const Duration(seconds: 1),
-                      ),
-                    );
-                  }
+                    TopToast.show(context, 'Added to "$val"');
+}
                 },
                 itemBuilder: (context) {
                   final playlistNames =

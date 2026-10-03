@@ -12,9 +12,9 @@ permissions:
   contents: write
 
 jobs:
-  build-mobile:
-    name: Build Android & iOS
-    runs-on: macos-latest
+  build-android:
+    name: Build Android
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
@@ -57,37 +57,17 @@ jobs:
       - name: Build Android APK
         run: flutter build apk --release --split-per-abi
 
-      - name: Build iOS
-        run: flutter build ios --no-codesign
-
-      - name: Create unsigned IPA
-        run: |
-          cd build/ios/iphoneos
-          mkdir -p Payload
-          cd Payload
-          ln -s ../Runner.app
-          cd ..
-          zip -r app.ipa Payload
-
       - name: Upload Android APKs
         uses: actions/upload-artifact@v4
         with:
           name: android-apks
           path: build/app/outputs/flutter-apk/*.apk
 
-      - name: Upload iOS IPA
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-ipa
-          path: build/ios/iphoneos/app.ipa
-
       - name: Push to Releases
         if: github.event_name == 'push'
         uses: ncipollo/release-action@v1
         with:
-          artifacts: |
-            build/app/outputs/flutter-apk/*.apk
-            build/ios/iphoneos/app.ipa
+          artifacts: build/app/outputs/flutter-apk/*.apk
           tag: v1.0.${{ github.run_number }}
           token: ${{ secrets.TOKEN }}
           allowUpdates: true

@@ -1,12 +1,22 @@
+import 'dart:io';
 import 'package:minimal_music_player/widgets/query_artwork_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:media_browser/media_browser.dart';
 import 'package:minimal_music_player/providers/playlist_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:minimal_music_player/ui/screens/fullplayer.dart';
+import 'package:minimal_music_player/ui/screens/fullplayerscreen.dart';
 
 class MiniPlayerWidget extends StatelessWidget {
   const MiniPlayerWidget({super.key});
+
+  Widget _buildNullMiniArtwork(ThemeData theme) {
+    return Container(
+      width: 56,
+      height: 56,
+      color: theme.colorScheme.primary.withValues(alpha: 0.2),
+      child: Icon(Icons.music_note, color: theme.colorScheme.primary),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,32 +39,45 @@ class MiniPlayerWidget extends StatelessWidget {
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(36),
-          border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.3), width: 1.5),
+          border: Border.all(
+            color: theme.colorScheme.primary.withValues(alpha: 0.3),
+            width: 1.5,
+          ),
           boxShadow: [
             BoxShadow(
               color: theme.colorScheme.primary.withValues(alpha: 0.15),
               blurRadius: 20,
               spreadRadius: 2,
               offset: const Offset(0, 4),
-            )
+            ),
           ],
         ),
         child: Row(
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(28),
-              child: QueryArtworkWidget(
-                id: song.id,
-                type: ArtworkType.audio,
-                artworkWidth: 56,
-                artworkHeight: 56,
-                nullArtworkWidget: Container(
-                  width: 56,
-                  height: 56,
-                  color: theme.colorScheme.primary.withValues(alpha: 0.2),
-                  child: Icon(Icons.music_note, color: theme.colorScheme.primary),
-                ),
-              ),
+              child: (song.artwork != null && song.artwork!.isNotEmpty)
+                  ? Image.file(
+                      File(song.artwork!),
+                      width: 56,
+                      height: 56,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          QueryArtworkWidget(
+                            id: song.id,
+                            type: ArtworkType.audio,
+                            artworkWidth: 56,
+                            artworkHeight: 56,
+                            nullArtworkWidget: _buildNullMiniArtwork(theme),
+                          ),
+                    )
+                  : QueryArtworkWidget(
+                      id: song.id,
+                      type: ArtworkType.audio,
+                      artworkWidth: 56,
+                      artworkHeight: 56,
+                      nullArtworkWidget: _buildNullMiniArtwork(theme),
+                    ),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -66,13 +89,21 @@ class MiniPlayerWidget extends StatelessWidget {
                     provider.getSongTitle(song),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
                   Text(
                     provider.getSongArtist(song),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 13, color: theme.colorScheme.inversePrimary.withValues(alpha: 0.7)),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: theme.colorScheme.inversePrimary.withValues(
+                        alpha: 0.7,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -84,7 +115,9 @@ class MiniPlayerWidget extends StatelessWidget {
               ),
               child: IconButton(
                 icon: Icon(
-                  provider.player.playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                  provider.player.playing
+                      ? Icons.pause_rounded
+                      : Icons.play_arrow_rounded,
                   color: theme.colorScheme.primary,
                   size: 28,
                 ),
@@ -93,7 +126,11 @@ class MiniPlayerWidget extends StatelessWidget {
             ),
             const SizedBox(width: 4),
             IconButton(
-              icon: Icon(Icons.close_rounded, color: theme.colorScheme.inversePrimary.withValues(alpha: 0.7), size: 24),
+              icon: Icon(
+                Icons.close_rounded,
+                color: theme.colorScheme.inversePrimary.withValues(alpha: 0.7),
+                size: 24,
+              ),
               onPressed: provider.clearQueue,
             ),
           ],
@@ -102,4 +139,3 @@ class MiniPlayerWidget extends StatelessWidget {
     );
   }
 }
-

@@ -1,3 +1,4 @@
+import 'package:minimal_music_player/utils/top_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:minimal_music_player/core/theme/theme_provider.dart';
 import 'package:provider/provider.dart';
@@ -170,41 +171,7 @@ class SettingsPage extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(height: 24),
 
-          _buildSectionHeader("ACCESSIBILITY", theme),
-          Container(
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  spreadRadius: 1,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-              border: Border.all(
-                color: theme.colorScheme.primary.withValues(alpha: 0.1),
-              ),
-            ),
-            child: SwitchListTile(
-              secondary: Icon(
-                Icons.touch_app_rounded,
-                color: theme.colorScheme.primary,
-              ),
-              title: const Text("Assistive Touch"),
-              subtitle: const Text("Floating quick actions button"),
-              activeTrackColor: theme.colorScheme.primary.withValues(alpha: 0.5), activeThumbColor: theme.colorScheme.primary,
-              value: themeProvider.isAssistiveTouchEnabled,
-              onChanged: (val) {
-                themeProvider.toggleAssistiveTouch();
-              },
-            ),
-          ),
-
-          const SizedBox(height: 24),
 
           _buildSectionHeader("LIBRARY STATISTICS", theme),
           Container(
@@ -290,22 +257,11 @@ class SettingsPage extends StatelessWidget {
                     color: theme.colorScheme.primary,
                   ),
                   onTap: () async {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Rescanning device music..."),
-                        duration: Duration(seconds: 1),
-                      ),
-                    );
-                    await musicProvider.rescanLibrary();
+                    TopToast.show(context, "Rescanning device music...");
+await musicProvider.rescanLibrary();
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            "Scan complete! Discovered ${musicProvider.songs.length} tracks.",
-                          ),
-                        ),
-                      );
-                    }
+                      TopToast.show(context, "Scan complete! Discovered ${musicProvider.songs.length} tracks.");
+}
                   },
                 ),
                 const Divider(height: 1, indent: 16, endIndent: 16),

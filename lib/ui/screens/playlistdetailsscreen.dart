@@ -1,3 +1,4 @@
+import 'package:minimal_music_player/utils/top_toast.dart';
 import 'package:minimal_music_player/widgets/query_artwork_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -138,15 +139,8 @@ class PlaylistDetailScreen extends StatelessWidget {
                                   for (var track in albumSongs) {
                                     p.addSongToPlaylist(playlistName, track.id);
                                   }
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        "Added ${albumSongs.length} tracks from \"${album.album}\"",
-                                      ),
-                                      duration: const Duration(seconds: 1),
-                                    ),
-                                  );
-                                },
+                                  TopToast.show(context, "Added ${albumSongs.length} tracks from \"${album.album}\"");
+},
                               ),
                             );
                           },

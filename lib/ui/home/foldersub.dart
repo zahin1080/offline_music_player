@@ -1,3 +1,4 @@
+import 'package:minimal_music_player/utils/top_toast.dart';
 import 'package:minimal_music_player/services/library_service.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -59,18 +60,12 @@ class FoldersSubView extends StatelessWidget {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               onPressed: () async {
-                final messenger = ScaffoldMessenger.of(context);
                 final name = controller.text.trim();
                 Navigator.pop(dialogContext);
                 final error = await provider.createCustomFolder(name);
-                messenger.showSnackBar(
-                  SnackBar(
-                    content: Text(error ?? "Folder '$name' created!"),
-                    backgroundColor: error == null ? theme.colorScheme.primary : null,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                );
+                if (context.mounted) {
+                  TopToast.show(context, error ?? "Folder '$name' created!");
+                }
               },
               child: const Text("Create"),
             ),
@@ -182,25 +177,14 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
 
   Future<void> _copyIntoFolder(MusicProvider provider, List<String> paths) async {
     if (paths.isEmpty) return;
-    final theme = Theme.of(context);
-    final messenger = ScaffoldMessenger.of(context);
     setState(() => _isCopying = true);
     final count = await provider.addFilesToFolder(widget.folderName, paths);
     if (!mounted) return;
     setState(() => _isCopying = false);
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          count > 0
+    TopToast.show(context, count > 0
               ? "Added $count ${count == 1 ? 'song' : 'songs'} to '${widget.folderName}'"
-              : "No songs were added. Allow \"All files access\" if prompted.",
-        ),
-        backgroundColor: count > 0 ? theme.colorScheme.primary : null,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-  }
+              : "No songs were added. Allow \"All files access\" if prompted.");
+}
 
   Future<void> _pickFromDeviceStorage(MusicProvider provider) async {
     try {
@@ -212,10 +196,8 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
       await _copyIntoFolder(provider, paths);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Could not open storage: $e")),
-      );
-    }
+      TopToast.show(context, "Could not open storage: $e");
+}
   }
 
   void _showAddSongsSheet(MusicProvider provider) {

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:minimal_music_player/widgets/query_artwork_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
@@ -14,6 +15,21 @@ class FullPlayerSheet extends StatelessWidget {
     final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
     final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
     return "$minutes:$seconds";
+  }
+
+  Widget _buildNullArtwork(ThemeData theme) {
+    return Container(
+      width: 320,
+      height: 320,
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primary.withValues(alpha: 0.1),
+      ),
+      child: Icon(
+        Icons.music_note_rounded,
+        size: 120,
+        color: theme.colorScheme.primary,
+      ),
+    );
   }
 
   void _openQueueModal(BuildContext context) {
@@ -104,26 +120,29 @@ class FullPlayerSheet extends StatelessWidget {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(36),
-                      child: QueryArtworkWidget(
-                        id: song.id,
-                        type: ArtworkType.audio,
-                        artworkWidth: 320,
-                        artworkHeight: 320,
-                        nullArtworkWidget: Container(
-                          width: 320,
-                          height: 320,
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.primary.withValues(
-                              alpha: 0.1,
+                      child: (song.artwork != null && song.artwork!.isNotEmpty)
+                          ? Image.file(
+                              File(song.artwork!),
+                              width: 320,
+                              height: 320,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return QueryArtworkWidget(
+                                  id: song.id,
+                                  type: ArtworkType.audio,
+                                  artworkWidth: 320,
+                                  artworkHeight: 320,
+                                  nullArtworkWidget: _buildNullArtwork(theme),
+                                );
+                              },
+                            )
+                          : QueryArtworkWidget(
+                              id: song.id,
+                              type: ArtworkType.audio,
+                              artworkWidth: 320,
+                              artworkHeight: 320,
+                              nullArtworkWidget: _buildNullArtwork(theme),
                             ),
-                          ),
-                          child: Icon(
-                            Icons.music_note_rounded,
-                            size: 120,
-                            color: theme.colorScheme.primary,
-                          ),
-                        ),
-                      ),
                     ),
                   ),
 

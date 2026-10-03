@@ -1,3 +1,4 @@
+import 'package:minimal_music_player/utils/top_toast.dart';
 import 'package:minimal_music_player/widgets/query_artwork_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -187,10 +188,8 @@ class RecentSubView extends StatelessWidget {
               onPressed: () {
                 provider.clearHistory();
                 Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("History cleared!")),
-                );
-              },
+                TopToast.show(context, "History cleared!");
+},
               style: ElevatedButton.styleFrom(
                 backgroundColor: theme.colorScheme.error,
                 foregroundColor: Colors.white,

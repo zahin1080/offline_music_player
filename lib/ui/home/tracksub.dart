@@ -1,3 +1,4 @@
+import 'package:minimal_music_player/utils/top_toast.dart';
 import 'package:minimal_music_player/widgets/query_artwork_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -167,18 +168,10 @@ class TracksSubView extends StatelessWidget {
                           _showRenameDialog(context, song);
                         } else {
                           provider.addSongToPlaylist(val, song.id);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Added to "$val"'),
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              backgroundColor: theme.colorScheme.surface,
-                            ),
-                          );
-                        }
+                          TopToast.show(context, 'Added to "$val"');
+}
                       },
                       itemBuilder: (context) {
-                        final playlistNames = provider.playlistBox.keys.cast<String>().toList();
                         return [
                           PopupMenuItem(
                             value: "rename",
@@ -198,34 +191,6 @@ class TracksSubView extends StatelessWidget {
                                   style: TextStyle(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
                                 ),
                               ],
-                            ),
-                          ),
-                          if (playlistNames.isNotEmpty) const PopupMenuDivider(),
-                          if (playlistNames.isNotEmpty)
-                            PopupMenuItem(
-                              enabled: false,
-                              height: 30,
-                              child: Text(
-                                "ADD TO PLAYLIST",
-                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface.withValues(alpha: 0.5), letterSpacing: 1.2),
-                              ),
-                            ),
-                          ...playlistNames.map(
-                            (name) => PopupMenuItem(
-                              value: name,
-                              child: Row(
-                                children: [
-                                  Icon(Icons.playlist_add_check_circle_rounded, size: 22, color: theme.colorScheme.primary.withValues(alpha: 0.8)),
-                                  const SizedBox(width: 14),
-                                  Expanded(
-                                    child: Text(
-                                      name, 
-                                      style: TextStyle(fontWeight: FontWeight.w500, color: theme.colorScheme.onSurface.withValues(alpha: 0.9)), 
-                                      overflow: TextOverflow.ellipsis
-                                    )
-                                  ),
-                                ],
-                              ),
                             ),
                           ),
                         ];

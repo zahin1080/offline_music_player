@@ -2,7 +2,7 @@ import 'package:minimal_music_player/services/library_service.dart';
 import 'package:minimal_music_player/widgets/query_artwork_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:media_browser/media_browser.dart';
-import 'package:minimal_music_player/models/music_models.dart';
+import 'package:minimal_music_player/album_artist/albumartist.dart';
 import 'package:minimal_music_player/providers/playlist_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -36,7 +36,9 @@ class AlbumsSubView extends StatelessWidget {
           ),
           child: Container(
             decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+              color: theme.colorScheme.surfaceContainerHighest.withValues(
+                alpha: 0.3,
+              ),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: theme.colorScheme.primary.withValues(alpha: 0.15),
@@ -51,15 +53,23 @@ class AlbumsSubView extends StatelessWidget {
                     type: ArtworkType.audio,
                     artworkWidth: double.infinity,
                     artworkHeight: double.infinity,
-                    artworkBorder: const BorderRadius.vertical(top: Radius.circular(16)),
+                    artworkBorder: const BorderRadius.vertical(
+                      top: Radius.circular(16),
+                    ),
                     nullArtworkWidget: Container(
                       width: double.infinity,
                       height: double.infinity,
                       decoration: BoxDecoration(
                         color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(16),
+                        ),
                       ),
-                      child: Icon(Icons.album_rounded, size: 64, color: theme.colorScheme.primary),
+                      child: Icon(
+                        Icons.album_rounded,
+                        size: 64,
+                        color: theme.colorScheme.primary,
+                      ),
                     ),
                   ),
                 ),
@@ -72,14 +82,19 @@ class AlbumsSubView extends StatelessWidget {
                         album.album,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onSurface,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         "${album.numOfSongs} ${album.numOfSongs == 1 ? 'track' : 'tracks'}",
                         style: TextStyle(
                           fontSize: 12,
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.6,
+                          ),
                         ),
                       ),
                     ],
@@ -95,7 +110,7 @@ class AlbumsSubView extends StatelessWidget {
 }
 
 class AlbumDetailScreen extends StatelessWidget {
-  final AlbumModel album;
+  final Album1 album;
   const AlbumDetailScreen({super.key, required this.album});
 
   @override
@@ -112,7 +127,10 @@ class AlbumDetailScreen extends StatelessWidget {
         iconTheme: IconThemeData(color: theme.colorScheme.primary),
         title: Text(
           album.album,
-          style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: theme.colorScheme.primary,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
       floatingActionButton: songs.isEmpty
@@ -145,7 +163,10 @@ class AlbumDetailScreen extends StatelessWidget {
                         color: theme.colorScheme.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Icon(Icons.music_note_rounded, color: theme.colorScheme.primary),
+                      child: Icon(
+                        Icons.music_note_rounded,
+                        color: theme.colorScheme.primary,
+                      ),
                     ),
                   ),
                   title: Text(
@@ -153,11 +174,18 @@ class AlbumDetailScreen extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontWeight: isPlaying ? FontWeight.bold : FontWeight.normal,
-                      color: isPlaying ? theme.colorScheme.primary : theme.colorScheme.onSurface,
+                      fontWeight: isPlaying
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                      color: isPlaying
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.onSurface,
                     ),
                   ),
-                  subtitle: Text(LibraryService.artistNameOf(song), maxLines: 1),
+                  subtitle: Text(
+                    LibraryService.artistNameOf(song),
+                    maxLines: 1,
+                  ),
                   onTap: () => provider.playSong(song, queue: songs),
                 );
               },
